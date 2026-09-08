@@ -1,14 +1,30 @@
 """
-Generates index.html + i10..i60.html for the dlt repo.
+Generates index.html + i10..i60.html for the AnoonMR/dlt GitHub Pages site.
 Each page is visually blank (white space only) - the Aim, Procedure (long
 form) and full Sample Code for each program live inside an HTML comment,
 visible via View Source (Ctrl+U) or Inspect (F12), for quick copy-paste.
 
-Run: python build.py
+The Code section for each program is a SINGLE block: auto-install check +
+the program itself, so one paste into a fresh notebook cell installs
+whatever's missing and runs, no second paste needed.
+
+Run: python make_github_pages.py   (writes into this same lt1 folder)
+Then: git add -A && git commit -m "..." && git push   (pushes to AnoonMR/dlt)
 """
 import os
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+INSTALL_TEMPLATE = '''# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {required!r}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+'''
 
 PROGRAMS = [
     dict(
@@ -27,6 +43,7 @@ PROGRAMS = [
             "Track misclassification errors per epoch.",
             "Plot the decision boundary and training error convergence.",
         ],
+        required={"numpy": "numpy", "matplotlib": "matplotlib"},
         code='''import numpy as np
 import matplotlib.pyplot as plt
 
@@ -92,6 +109,7 @@ plt.show()
             "Print classification report with precision, recall, F1-score.",
             "Plot the confusion matrix and training loss curve.",
         ],
+        required={"sklearn": "scikit-learn", "matplotlib": "matplotlib", "numpy": "numpy"},
         code='''from sklearn.neural_network import MLPClassifier
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
@@ -145,6 +163,7 @@ plt.show()
             "Compute derivatives of each activation function.",
             "Plot all functions and their derivatives in a 2x3 subplot grid.",
         ],
+        required={"numpy": "numpy", "matplotlib": "matplotlib"},
         code='''import numpy as np
 import matplotlib.pyplot as plt
 
@@ -196,6 +215,7 @@ for fn, name in [(sigmoid, 'Sigmoid'), (tanh, 'Tanh'), (relu, 'ReLU')]:
             "Update weights with gradient descent.",
             "Train on XOR problem and plot loss curve over epochs.",
         ],
+        required={"numpy": "numpy", "matplotlib": "matplotlib"},
         code='''import numpy as np
 import matplotlib.pyplot as plt
 
@@ -208,9 +228,9 @@ X = np.array([[0,0],[0,1],[1,0],[1,1]])
 y = np.array([[0],[1],[1],[0]])
 
 np.random.seed(42)
-W1 = np.random.randn(2, 4) * 0.1
+W1 = np.random.randn(2, 4) * 0.5
 b1 = np.zeros((1, 4))
-W2 = np.random.randn(4, 1) * 0.1
+W2 = np.random.randn(4, 1) * 0.5
 b2 = np.zeros((1, 1))
 lr = 0.5; losses = []
 
@@ -263,6 +283,7 @@ plt.show()
             "Evaluate model on test set and plot training/validation accuracy.",
             "Visualize sample predictions with true and predicted labels.",
         ],
+        required={"tensorflow": "tensorflow", "matplotlib": "matplotlib", "numpy": "numpy"},
         code='''import tensorflow as tf
 from tensorflow.keras import layers, models
 import matplotlib.pyplot as plt
@@ -317,6 +338,7 @@ plt.show()
             "Compare test accuracies to demonstrate effectiveness of regularization.",
             "Visualize the gap between train/val loss for each model.",
         ],
+        required={"tensorflow": "tensorflow", "matplotlib": "matplotlib", "numpy": "numpy"},
         code='''import tensorflow as tf
 from tensorflow.keras import layers, models, regularizers, callbacks
 import matplotlib.pyplot as plt
@@ -369,6 +391,10 @@ plt.show()
 PAGE_CSS = "<style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style>"
 
 
+def full_code(prog):
+    return INSTALL_TEMPLATE.format(required=prog["required"]) + "\n" + prog["code"]
+
+
 def block(prog):
     steps = "\n".join(f"{i}. {s}" for i, s in enumerate(prog["procedure"], start=1))
     return (
@@ -376,7 +402,7 @@ def block(prog):
         f"{'=' * len(prog['title'])}\n\n"
         f"Aim\n---\n{prog['aim']}\n\n"
         f"Procedure\n---------\n{steps}\n\n"
-        f"Code\n----\n{prog['code']}"
+        f"Code\n----\n{full_code(prog)}"
     )
 
 

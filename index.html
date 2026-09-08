@@ -21,6 +21,16 @@ Procedure
 
 Code
 ----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -91,6 +101,16 @@ Procedure
 
 Code
 ----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'sklearn': 'scikit-learn', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
 from sklearn.neural_network import MLPClassifier
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
@@ -148,6 +168,16 @@ Procedure
 
 Code
 ----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -203,6 +233,16 @@ Procedure
 
 Code
 ----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -215,9 +255,9 @@ X = np.array([[0,0],[0,1],[1,0],[1,1]])
 y = np.array([[0],[1],[1],[0]])
 
 np.random.seed(42)
-W1 = np.random.randn(2, 4) * 0.1
+W1 = np.random.randn(2, 4) * 0.5
 b1 = np.zeros((1, 4))
-W2 = np.random.randn(4, 1) * 0.1
+W2 = np.random.randn(4, 1) * 0.5
 b2 = np.zeros((1, 1))
 lr = 0.5; losses = []
 
@@ -274,6 +314,16 @@ Procedure
 
 Code
 ----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'tensorflow': 'tensorflow', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
 import tensorflow as tf
 from tensorflow.keras import layers, models
 import matplotlib.pyplot as plt
@@ -332,6 +382,16 @@ Procedure
 
 Code
 ----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'tensorflow': 'tensorflow', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
 import tensorflow as tf
 from tensorflow.keras import layers, models, regularizers, callbacks
 import matplotlib.pyplot as plt
