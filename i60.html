@@ -1,0 +1,71 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Program 6: Overfitting and Underfitting with Regularization</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 6: Overfitting and Underfitting with Regularization
+===========================================================
+
+Aim
+---
+To analyze overfitting and underfitting in deep learning models and apply regularization techniques (L1/L2, Dropout, Early Stopping) to achieve better generalization.
+
+Procedure
+---------
+1. Load dataset and create three models: underfitting (too simple), overfitting (no regularization), regularized.
+2. Underfitting model: Single dense layer with few neurons.
+3. Overfitting model: Deep network trained too long without regularization.
+4. Regularized model: Add Dropout (0.5), L2 weight decay, and Early Stopping.
+5. Train all three models and plot training vs validation accuracy curves.
+6. Compare test accuracies to demonstrate effectiveness of regularization.
+7. Visualize the gap between train/val loss for each model.
+
+Code
+----
+import tensorflow as tf
+from tensorflow.keras import layers, models, regularizers, callbacks
+import matplotlib.pyplot as plt
+import numpy as np
+
+(X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
+X_train = X_train.reshape(-1, 784)/255.0
+X_test  = X_test.reshape(-1, 784)/255.0
+# Use only 2000 samples to exaggerate overfitting
+X_small, y_small = X_train[:2000], y_train[:2000]
+
+def make_model(kind='overfit'):
+    m = models.Sequential()
+    if kind == 'underfit':
+        m.add(layers.Dense(4, activation='relu', input_shape=(784,)))
+    elif kind == 'overfit':
+        for _ in range(5): m.add(layers.Dense(512, activation='relu'))
+    else:  # regularized
+        for _ in range(5):
+            m.add(layers.Dense(512, activation='relu',
+                  kernel_regularizer=regularizers.l2(0.001)))
+            m.add(layers.Dropout(0.5))
+    m.add(layers.Dense(10, activation='softmax'))
+    m.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    return m
+
+histories = {}
+early_stop = callbacks.EarlyStopping(patience=5, restore_best_weights=True)
+for kind in ['underfit', 'overfit', 'regularized']:
+    cb = [early_stop] if kind == 'regularized' else []
+    h = make_model(kind).fit(X_small, y_small, epochs=50,
+                             validation_split=0.2, verbose=0, callbacks=cb)
+    histories[kind] = h.history
+    train_acc = h.history["accuracy"][-1]
+    val_acc = max(h.history["val_accuracy"])
+    print(f'{kind}: train_acc={train_acc:.4f}, val_acc={val_acc:.4f}, gap={train_acc - val_acc:.4f}')
+
+# Plot training vs validation accuracy for each model
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+for ax, kind in zip(axes, ['underfit', 'overfit', 'regularized']):
+    ax.plot(histories[kind]['accuracy'], label='Train')
+    ax.plot(histories[kind]['val_accuracy'], label='Val')
+    ax.set_title(kind); ax.set_xlabel('Epoch'); ax.set_ylabel('Accuracy'); ax.legend()
+plt.tight_layout()
+plt.show()
+
+-->
+</body></html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Program 4: Backpropagation for Neural Network Training</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 4: Backpropagation for Neural Network Training
+======================================================
+
+Aim
+---
+To implement backpropagation from scratch for training a simple feedforward neural network and analyze the behavior of the loss function during training.
+
+Procedure
+---------
+1. Define neural network architecture with one hidden layer.
+2. Initialize weights and biases randomly using numpy.
+3. Implement forward pass: compute activations at each layer.
+4. Define Mean Squared Error (MSE) loss function.
+5. Implement backward pass: compute gradients using chain rule.
+6. Update weights with gradient descent.
+7. Train on XOR problem and plot loss curve over epochs.
+
+Code
+----
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Sigmoid and its derivative
+def sigmoid(x): return 1 / (1 + np.exp(-x))
+def sigmoid_d(x): return sigmoid(x) * (1 - sigmoid(x))
+
+# XOR dataset
+X = np.array([[0,0],[0,1],[1,0],[1,1]])
+y = np.array([[0],[1],[1],[0]])
+
+np.random.seed(42)
+W1 = np.random.randn(2, 4) * 0.1
+b1 = np.zeros((1, 4))
+W2 = np.random.randn(4, 1) * 0.1
+b2 = np.zeros((1, 1))
+lr = 0.5; losses = []
+
+for epoch in range(10000):
+    # Forward pass
+    z1 = X @ W1 + b1
+    a1 = sigmoid(z1)
+    z2 = a1 @ W2 + b2
+    a2 = sigmoid(z2)
+
+    # Loss
+    loss = np.mean((y - a2) ** 2)
+    losses.append(loss)
+
+    # Backward pass
+    d_a2 = -2*(y - a2)/y.shape[0]
+    d_z2 = d_a2 * sigmoid_d(z2)
+    dW2 = a1.T @ d_z2
+    db2 = np.sum(d_z2, axis=0, keepdims=True)
+    d_a1 = d_z2 @ W2.T
+    d_z1 = d_a1 * sigmoid_d(z1)
+    dW1 = X.T @ d_z1
+    db1 = np.sum(d_z1, axis=0, keepdims=True)
+
+    # Update weights
+    W2 -= lr * dW2; b2 -= lr * db2
+    W1 -= lr * dW1; b1 -= lr * db1
+
+    if epoch % 1000 == 0:
+        print(f'Epoch {epoch}: Loss={loss:.6f}')
+
+print('Predictions:', np.round(a2.T, 3))
+plt.plot(losses); plt.title('Loss Curve')
+plt.show()
+
+-->
+</body></html>

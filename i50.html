@@ -1,0 +1,62 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Program 5: CNN Model for Image Classification</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 5: CNN Model for Image Classification
+=============================================
+
+Aim
+---
+To train a Convolutional Neural Network (CNN) model for image classification on the CIFAR-10 dataset and evaluate its performance in terms of accuracy and loss.
+
+Procedure
+---------
+1. Import TensorFlow/Keras and load CIFAR-10 dataset.
+2. Normalize pixel values to range [0, 1].
+3. Define CNN architecture: Conv2D -> MaxPool -> Conv2D -> MaxPool -> Dense layers.
+4. Compile model with Adam optimizer and sparse categorical crossentropy loss.
+5. Train model for 10 epochs with validation split.
+6. Evaluate model on test set and plot training/validation accuracy.
+7. Visualize sample predictions with true and predicted labels.
+
+Code
+----
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Load CIFAR-10
+(X_train, y_train), (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
+X_train, X_test = X_train/255.0, X_test/255.0
+classes = ['airplane','auto','bird','cat','deer','dog','frog','horse','ship','truck']
+
+# Build CNN
+model = models.Sequential([
+    layers.Conv2D(32, (3,3), activation='relu', input_shape=(32,32,3)),
+    layers.MaxPooling2D(2,2),
+    layers.Conv2D(64, (3,3), activation='relu'),
+    layers.MaxPooling2D(2,2),
+    layers.Conv2D(64, (3,3), activation='relu'),
+    layers.Flatten(),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(10, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.summary()
+
+history = model.fit(X_train, y_train, epochs=10, validation_split=0.1, batch_size=64)
+
+test_loss, test_acc = model.evaluate(X_test, y_test)
+print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc*100:.2f}%')
+
+plt.figure(figsize=(12,4))
+plt.subplot(1,2,1); plt.plot(history.history['accuracy'], label='Train')
+plt.plot(history.history['val_accuracy'], label='Val'); plt.title('Accuracy'); plt.legend()
+plt.subplot(1,2,2); plt.plot(history.history['loss'], label='Train')
+plt.plot(history.history['val_loss'], label='Val'); plt.title('Loss'); plt.legend()
+plt.show()
+
+-->
+</body></html>

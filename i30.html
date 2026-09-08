@@ -1,0 +1,59 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Program 3: Activation Functions (ReLU, Sigmoid, Tanh)</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 3: Activation Functions (ReLU, Sigmoid, Tanh)
+=====================================================
+
+Aim
+---
+To implement and visualize three major activation functions - ReLU, Sigmoid, and Tanh - and analyze their mathematical properties, gradients, and typical use cases in neural networks.
+
+Procedure
+---------
+1. Import numpy and matplotlib libraries.
+2. Define input range x from -10 to 10.
+3. Implement Sigmoid: f(x) = 1 / (1 + e^-x).
+4. Implement Tanh: f(x) = (e^x - e^-x) / (e^x + e^-x).
+5. Implement ReLU: f(x) = max(0, x).
+6. Compute derivatives of each activation function.
+7. Plot all functions and their derivatives in a 2x3 subplot grid.
+
+Code
+----
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(-10, 10, 300)
+
+# Activation functions
+def sigmoid(x): return 1 / (1 + np.exp(-x))
+def sigmoid_deriv(x): s = sigmoid(x); return s * (1 - s)
+
+def tanh(x): return np.tanh(x)
+def tanh_deriv(x): return 1 - np.tanh(x)**2
+
+def relu(x): return np.maximum(0, x)
+def relu_deriv(x): return np.where(x > 0, 1, 0)
+
+# Plot
+fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+funcs = [(sigmoid, sigmoid_deriv, 'Sigmoid', 'blue'),
+         (tanh, tanh_deriv, 'Tanh', 'green'),
+         (relu, relu_deriv, 'ReLU', 'red')]
+
+for i, (fn, dfn, name, color) in enumerate(funcs):
+    axes[0, i].plot(x, fn(x), color=color, linewidth=2)
+    axes[0, i].set_title(f'{name} Function'); axes[0, i].grid(True)
+    axes[1, i].plot(x, dfn(x), color=color, linestyle='--', linewidth=2)
+    axes[1, i].set_title(f'{name} Derivative'); axes[1, i].grid(True)
+
+plt.tight_layout()
+plt.show()
+
+# Print key values
+for fn, name in [(sigmoid, 'Sigmoid'), (tanh, 'Tanh'), (relu, 'ReLU')]:
+    print(f'{name}: f(0)={fn(np.array([0]))[0]:.4f}, f(2)={fn(np.array([2]))[0]:.4f}, f(-2)={fn(np.array([-2]))[0]:.4f}')
+
+-->
+</body></html>

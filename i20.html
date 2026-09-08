@@ -1,0 +1,61 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Program 2: Multi-Layer Perceptron (MLP) on a Dataset</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 2: Multi-Layer Perceptron (MLP) on a Dataset
+====================================================
+
+Aim
+---
+To train a Multi-Layer Perceptron (MLP) model on a real-world dataset (Iris or MNIST) and analyze its classification accuracy.
+
+Procedure
+---------
+1. Import sklearn, numpy, and matplotlib libraries.
+2. Load the Iris dataset and split it into training and testing sets (80/20 split).
+3. Standardize features using StandardScaler.
+4. Create an MLPClassifier with hidden layers, ReLU activation, and adam optimizer.
+5. Train the model on training data and evaluate on test data.
+6. Print classification report with precision, recall, F1-score.
+7. Plot the confusion matrix and training loss curve.
+
+Code
+----
+from sklearn.neural_network import MLPClassifier
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Load and prepare data
+data = load_iris()
+X, y = data.data, data.target
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Build and train MLP
+mlp = MLPClassifier(hidden_layer_sizes=(100, 50), activation='relu',
+                    solver='adam', max_iter=500, random_state=42)
+mlp.fit(X_train, y_train)
+
+# Evaluation
+y_pred = mlp.predict(X_test)
+print('Classification Report:')
+print(classification_report(y_test, y_pred, target_names=data.target_names))
+print('Confusion Matrix:')
+print(confusion_matrix(y_test, y_pred))
+print(f'Test Accuracy: {mlp.score(X_test, y_test)*100:.2f}%')
+
+# Plot loss curve
+plt.plot(mlp.loss_curve_)
+plt.title('MLP Training Loss Curve')
+plt.xlabel('Iterations'); plt.ylabel('Loss')
+plt.show()
+
+-->
+</body></html>

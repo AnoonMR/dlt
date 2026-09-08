@@ -1,0 +1,74 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Program 1: Perceptron Model for Binary Classification</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 1: Perceptron Model for Binary Classification
+=====================================================
+
+Aim
+---
+To implement a perceptron model from scratch for binary classification and demonstrate how a single-layer neural network learns to separate linearly separable data.
+
+Procedure
+---------
+1. Import necessary libraries: numpy for computation, matplotlib for plotting.
+2. Define the Perceptron class with weight initialization, predict(), and train() methods.
+3. Generate or use a simple binary classification dataset (e.g., AND gate or linearly separable points).
+4. Initialize perceptron with learning rate and number of epochs.
+5. Train the model using the perceptron learning rule: w = w + lr * (y - y_hat) * x.
+6. Track misclassification errors per epoch.
+7. Plot the decision boundary and training error convergence.
+
+Code
+----
+import numpy as np
+import matplotlib.pyplot as plt
+
+class Perceptron:
+    def __init__(self, learning_rate=0.1, n_epochs=100):
+        self.lr = learning_rate
+        self.n_epochs = n_epochs
+        self.weights = None
+        self.bias = None
+        self.errors = []
+
+    def step_function(self, x):
+        return np.where(x >= 0, 1, 0)
+
+    def train(self, X, y):
+        n_samples, n_features = X.shape
+        self.weights = np.zeros(n_features)
+        self.bias = 0
+        for epoch in range(self.n_epochs):
+            error_count = 0
+            for xi, yi in zip(X, y):
+                output = self.step_function(np.dot(xi, self.weights) + self.bias)
+                update = self.lr * (yi - output)
+                self.weights += update * xi
+                self.bias += update
+                error_count += int(update != 0)
+            self.errors.append(error_count)
+
+    def predict(self, X):
+        return self.step_function(np.dot(X, self.weights) + self.bias)
+
+# Dataset: OR gate
+X = np.array([[0,0],[0,1],[1,0],[1,1]])
+y = np.array([0, 1, 1, 1])
+
+p = Perceptron(learning_rate=0.1, n_epochs=20)
+p.train(X, y)
+predictions = p.predict(X)
+
+print('Weights:', p.weights)
+print('Bias:', p.bias)
+print('Predictions:', predictions)
+print('Accuracy: {:.2f}%'.format(np.mean(predictions == y) * 100))
+
+plt.plot(range(1, len(p.errors)+1), p.errors, marker='o')
+plt.xlabel('Epoch'); plt.ylabel('Misclassifications')
+plt.title('Perceptron Training Error')
+plt.show()
+
+-->
+</body></html>
