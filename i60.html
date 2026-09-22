@@ -2,80 +2,95 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 6: Overfitting and Underfitting with Regularization
-===========================================================
+Program 6: Develop an interactive visualization/dashboard using Plotly or Tableau
+=================================================================================
 
 Aim
 ---
-To analyze overfitting and underfitting in deep learning models and apply regularization techniques (L1/L2, Dropout, Early Stopping) to achieve better generalization.
+To build an interactive dashboard on the Mall Customers dataset using Plotly, combining multiple linked charts to highlight customer trends.
+
+Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
 
 Procedure
 ---------
-1. Load dataset and create three models: underfitting (too simple), overfitting (no regularization), regularized.
-2. Underfitting model: Single dense layer with few neurons.
-3. Overfitting model: Deep network trained too long without regularization.
-4. Regularized model: Add Dropout (0.5), L2 weight decay, and Early Stopping.
-5. Train all three models and plot training vs validation accuracy curves.
-6. Compare test accuracies to demonstrate effectiveness of regularization.
-7. Visualize the gap between train/val loss for each model.
+1. Import pandas, plotly.express, plotly.graph_objects and make_subplots.
+2. Load the Mall_Customers.csv dataset.
+3. Create an interactive scatter plot of Income vs Spending Score.
+4. Create an interactive histogram of Age distribution by Gender.
+5. Create an interactive box plot of Spending Score by Gender.
+6. Bucket customers into age groups and plot average spending per group.
+7. Combine all views into a single 2x2 interactive dashboard using subplots.
+8. Export the dashboard as a standalone HTML file.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'tensorflow': 'tensorflow', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
+required = {'pandas': 'pandas', 'plotly': 'plotly', 'nbformat': 'nbformat'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
-import tensorflow as tf
-from tensorflow.keras import layers, models, regularizers, callbacks
-import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-(X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
-X_train = X_train.reshape(-1, 784)/255.0
-X_test  = X_test.reshape(-1, 784)/255.0
-# Use only 2000 samples to exaggerate overfitting
-X_small, y_small = X_train[:2000], y_train[:2000]
+# Load dataset
+df = pd.read_csv("Mall_Customers.csv")
+display(df.head())
 
-def make_model(kind='overfit'):
-    m = models.Sequential()
-    if kind == 'underfit':
-        m.add(layers.Dense(4, activation='relu', input_shape=(784,)))
-    elif kind == 'overfit':
-        for _ in range(5): m.add(layers.Dense(512, activation='relu'))
-    else:  # regularized
-        for _ in range(5):
-            m.add(layers.Dense(512, activation='relu',
-                  kernel_regularizer=regularizers.l2(0.001)))
-            m.add(layers.Dropout(0.5))
-    m.add(layers.Dense(10, activation='softmax'))
-    m.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    return m
+# Interactive scatter plot: Income vs Spending Score
+fig1 = px.scatter(df, x="Annual Income (k$)", y="Spending Score (1-100)",
+                   color="Gender", hover_data=["Age", "CustomerID"],
+                   title="Annual Income vs Spending Score")
+fig1.show()
 
-histories = {}
-early_stop = callbacks.EarlyStopping(patience=5, restore_best_weights=True)
-for kind in ['underfit', 'overfit', 'regularized']:
-    cb = [early_stop] if kind == 'regularized' else []
-    h = make_model(kind).fit(X_small, y_small, epochs=50,
-                             validation_split=0.2, verbose=0, callbacks=cb)
-    histories[kind] = h.history
-    train_acc = h.history["accuracy"][-1]
-    val_acc = max(h.history["val_accuracy"])
-    print(f'{kind}: train_acc={train_acc:.4f}, val_acc={val_acc:.4f}, gap={train_acc - val_acc:.4f}')
+# Interactive histogram: Age distribution
+fig2 = px.histogram(df, x="Age", color="Gender", nbins=20,
+                     title="Age Distribution by Gender")
+fig2.show()
 
-# Plot training vs validation accuracy for each model
-fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-for ax, kind in zip(axes, ['underfit', 'overfit', 'regularized']):
-    ax.plot(histories[kind]['accuracy'], label='Train')
-    ax.plot(histories[kind]['val_accuracy'], label='Val')
-    ax.set_title(kind); ax.set_xlabel('Epoch'); ax.set_ylabel('Accuracy'); ax.legend()
-plt.tight_layout()
-plt.show()
+# Interactive box plot: Spending Score by Gender
+fig3 = px.box(df, x="Gender", y="Spending Score (1-100)", color="Gender",
+              title="Spending Score by Gender")
+fig3.show()
+
+# Interactive bar chart: average spending score by age group
+df["Age Group"] = pd.cut(df["Age"], bins=[17, 25, 35, 45, 55, 70],
+                          labels=["18-25", "26-35", "36-45", "46-55", "56-70"])
+age_group_avg = df.groupby("Age Group", observed=True)["Spending Score (1-100)"].mean().reset_index()
+
+fig4 = px.bar(age_group_avg, x="Age Group", y="Spending Score (1-100)",
+              title="Average Spending Score by Age Group", color="Age Group")
+fig4.show()
+
+# Combined interactive dashboard (2x2 grid of linked views)
+dashboard = make_subplots(rows=2, cols=2, subplot_titles=(
+    "Income vs Spending Score", "Age Distribution",
+    "Spending Score by Gender", "Avg Spending by Age Group"
+))
+
+for gender in df["Gender"].unique():
+    d = df[df["Gender"] == gender]
+    dashboard.add_trace(go.Scatter(x=d["Annual Income (k$)"], y=d["Spending Score (1-100)"],
+                                    mode="markers", name=f"{gender} (Income vs Spending)"), row=1, col=1)
+    dashboard.add_trace(go.Histogram(x=d["Age"], name=f"{gender} (Age)"), row=1, col=2)
+    dashboard.add_trace(go.Box(y=d["Spending Score (1-100)"], name=gender), row=2, col=1)
+
+dashboard.add_trace(go.Bar(x=age_group_avg["Age Group"].astype(str),
+                            y=age_group_avg["Spending Score (1-100)"],
+                            name="Avg Spending Score"), row=2, col=2)
+
+dashboard.update_layout(height=800, width=950, title_text="Mall Customer Dashboard", showlegend=False)
+dashboard.show()
+
+# Save the interactive dashboard as a standalone HTML file
+dashboard.write_html("Mall_Customer_Dashboard.html")
+print("Dashboard saved as Mall_Customer_Dashboard.html")
 
 -->
 </body></html>

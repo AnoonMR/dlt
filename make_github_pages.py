@@ -1,408 +1,89 @@
 """
-Generates index.html + i10..i60.html for the AnoonMR/dlt GitHub Pages site.
-Each page is visually blank (white space only) - the Aim, Procedure (long
-form) and full Sample Code for each program live inside an HTML comment,
-visible via View Source (Ctrl+U) or Inspect (F12), for quick copy-paste.
+Generates index.html + i10..i60.html (+ i65.html for Program 6B) for the
+AnoonMR/dlt GitHub Pages site - PADV (Predictive Analytics and Data
+Visualization) lab programs.
 
-The Code section for each program is a SINGLE block: auto-install check +
-the program itself, so one paste into a fresh notebook cell installs
-whatever's missing and runs, no second paste needed.
+Each page is visually blank (white space only) - the Aim, Procedure (long
+form) and full Code for each program live inside an HTML comment, visible via
+View Source (Ctrl+U) or Inspect (F12), for quick copy-paste.
+
+Sources (nothing is retyped here):
+  - Title / Aim / Procedure (long form): PADV_Lab_Record.txt in the padv lab
+    folder (read-only).
+  - Code: the two cells of the verified lt1 notebooks built by
+    make_lt1_notebooks.py - auto-install cell merged in front of the program
+    cell, so one paste into a fresh notebook cell installs what's missing and runs.
+
+Datasets are never embedded in or downloaded by the code (code stays clean).
+Each block names its CSV on a "Dataset:" line; place that file next to the
+notebook before running.
 
 Run: python make_github_pages.py   (writes into this same lt1 folder)
-Then: git add -A && git commit -m "..." && git push   (pushes to AnoonMR/dlt)
 """
 import os
+import re
+
+import nbformat
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
+RECORD = r"C:\all\3 sem\padv\lab\PADV_Lab_Record.txt"
 
-INSTALL_TEMPLATE = '''# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
-import importlib, subprocess, sys
-
-required = {required!r}
-for import_name, pip_name in required.items():
-    try:
-        importlib.import_module(import_name)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
-'''
-
+PENG, MALL = "penguins_size.csv", "Mall_Customers.csv"
 PROGRAMS = [
-    dict(
-        num=1,
-        page="i10.html",
-        title="Program 1: Perceptron Model for Binary Classification",
-        aim="To implement a perceptron model from scratch for binary classification and "
-            "demonstrate how a single-layer neural network learns to separate linearly "
-            "separable data.",
-        procedure=[
-            "Import necessary libraries: numpy for computation, matplotlib for plotting.",
-            "Define the Perceptron class with weight initialization, predict(), and train() methods.",
-            "Generate or use a simple binary classification dataset (e.g., AND gate or linearly separable points).",
-            "Initialize perceptron with learning rate and number of epochs.",
-            "Train the model using the perceptron learning rule: w = w + lr * (y - y_hat) * x.",
-            "Track misclassification errors per epoch.",
-            "Plot the decision boundary and training error convergence.",
-        ],
-        required={"numpy": "numpy", "matplotlib": "matplotlib"},
-        code='''import numpy as np
-import matplotlib.pyplot as plt
-
-class Perceptron:
-    def __init__(self, learning_rate=0.1, n_epochs=100):
-        self.lr = learning_rate
-        self.n_epochs = n_epochs
-        self.weights = None
-        self.bias = None
-        self.errors = []
-
-    def step_function(self, x):
-        return np.where(x >= 0, 1, 0)
-
-    def train(self, X, y):
-        n_samples, n_features = X.shape
-        self.weights = np.zeros(n_features)
-        self.bias = 0
-        for epoch in range(self.n_epochs):
-            error_count = 0
-            for xi, yi in zip(X, y):
-                output = self.step_function(np.dot(xi, self.weights) + self.bias)
-                update = self.lr * (yi - output)
-                self.weights += update * xi
-                self.bias += update
-                error_count += int(update != 0)
-            self.errors.append(error_count)
-
-    def predict(self, X):
-        return self.step_function(np.dot(X, self.weights) + self.bias)
-
-# Dataset: OR gate
-X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([0, 1, 1, 1])
-
-p = Perceptron(learning_rate=0.1, n_epochs=20)
-p.train(X, y)
-predictions = p.predict(X)
-
-print('Weights:', p.weights)
-print('Bias:', p.bias)
-print('Predictions:', predictions)
-print('Accuracy: {:.2f}%'.format(np.mean(predictions == y) * 100))
-
-plt.plot(range(1, len(p.errors)+1), p.errors, marker='o')
-plt.xlabel('Epoch'); plt.ylabel('Misclassifications')
-plt.title('Perceptron Training Error')
-plt.show()
-''',
-    ),
-    dict(
-        num=2,
-        page="i20.html",
-        title="Program 2: Multi-Layer Perceptron (MLP) on a Dataset",
-        aim="To train a Multi-Layer Perceptron (MLP) model on a real-world dataset "
-            "(Iris or MNIST) and analyze its classification accuracy.",
-        procedure=[
-            "Import sklearn, numpy, and matplotlib libraries.",
-            "Load the Iris dataset and split it into training and testing sets (80/20 split).",
-            "Standardize features using StandardScaler.",
-            "Create an MLPClassifier with hidden layers, ReLU activation, and adam optimizer.",
-            "Train the model on training data and evaluate on test data.",
-            "Print classification report with precision, recall, F1-score.",
-            "Plot the confusion matrix and training loss curve.",
-        ],
-        required={"sklearn": "scikit-learn", "matplotlib": "matplotlib", "numpy": "numpy"},
-        code='''from sklearn.neural_network import MLPClassifier
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, confusion_matrix
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Load and prepare data
-data = load_iris()
-X, y = data.data, data.target
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-
-# Build and train MLP
-mlp = MLPClassifier(hidden_layer_sizes=(100, 50), activation='relu',
-                    solver='adam', max_iter=500, random_state=42)
-mlp.fit(X_train, y_train)
-
-# Evaluation
-y_pred = mlp.predict(X_test)
-print('Classification Report:')
-print(classification_report(y_test, y_pred, target_names=data.target_names))
-print('Confusion Matrix:')
-print(confusion_matrix(y_test, y_pred))
-print(f'Test Accuracy: {mlp.score(X_test, y_test)*100:.2f}%')
-
-# Plot loss curve
-plt.plot(mlp.loss_curve_)
-plt.title('MLP Training Loss Curve')
-plt.xlabel('Iterations'); plt.ylabel('Loss')
-plt.show()
-''',
-    ),
-    dict(
-        num=3,
-        page="i30.html",
-        title="Program 3: Activation Functions (ReLU, Sigmoid, Tanh)",
-        aim="To implement and visualize three major activation functions - ReLU, "
-            "Sigmoid, and Tanh - and analyze their mathematical properties, "
-            "gradients, and typical use cases in neural networks.",
-        procedure=[
-            "Import numpy and matplotlib libraries.",
-            "Define input range x from -10 to 10.",
-            "Implement Sigmoid: f(x) = 1 / (1 + e^-x).",
-            "Implement Tanh: f(x) = (e^x - e^-x) / (e^x + e^-x).",
-            "Implement ReLU: f(x) = max(0, x).",
-            "Compute derivatives of each activation function.",
-            "Plot all functions and their derivatives in a 2x3 subplot grid.",
-        ],
-        required={"numpy": "numpy", "matplotlib": "matplotlib"},
-        code='''import numpy as np
-import matplotlib.pyplot as plt
-
-x = np.linspace(-10, 10, 300)
-
-# Activation functions
-def sigmoid(x): return 1 / (1 + np.exp(-x))
-def sigmoid_deriv(x): s = sigmoid(x); return s * (1 - s)
-
-def tanh(x): return np.tanh(x)
-def tanh_deriv(x): return 1 - np.tanh(x)**2
-
-def relu(x): return np.maximum(0, x)
-def relu_deriv(x): return np.where(x > 0, 1, 0)
-
-# Plot
-fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-funcs = [(sigmoid, sigmoid_deriv, 'Sigmoid', 'blue'),
-         (tanh, tanh_deriv, 'Tanh', 'green'),
-         (relu, relu_deriv, 'ReLU', 'red')]
-
-for i, (fn, dfn, name, color) in enumerate(funcs):
-    axes[0, i].plot(x, fn(x), color=color, linewidth=2)
-    axes[0, i].set_title(f'{name} Function'); axes[0, i].grid(True)
-    axes[1, i].plot(x, dfn(x), color=color, linestyle='--', linewidth=2)
-    axes[1, i].set_title(f'{name} Derivative'); axes[1, i].grid(True)
-
-plt.tight_layout()
-plt.show()
-
-# Print key values
-for fn, name in [(sigmoid, 'Sigmoid'), (tanh, 'Tanh'), (relu, 'ReLU')]:
-    print(f'{name}: f(0)={fn(np.array([0]))[0]:.4f}, f(2)={fn(np.array([2]))[0]:.4f}, f(-2)={fn(np.array([-2]))[0]:.4f}')
-''',
-    ),
-    dict(
-        num=4,
-        page="i40.html",
-        title="Program 4: Backpropagation for Neural Network Training",
-        aim="To implement backpropagation from scratch for training a simple "
-            "feedforward neural network and analyze the behavior of the loss "
-            "function during training.",
-        procedure=[
-            "Define neural network architecture with one hidden layer.",
-            "Initialize weights and biases randomly using numpy.",
-            "Implement forward pass: compute activations at each layer.",
-            "Define Mean Squared Error (MSE) loss function.",
-            "Implement backward pass: compute gradients using chain rule.",
-            "Update weights with gradient descent.",
-            "Train on XOR problem and plot loss curve over epochs.",
-        ],
-        required={"numpy": "numpy", "matplotlib": "matplotlib"},
-        code='''import numpy as np
-import matplotlib.pyplot as plt
-
-# Sigmoid and its derivative
-def sigmoid(x): return 1 / (1 + np.exp(-x))
-def sigmoid_d(x): return sigmoid(x) * (1 - sigmoid(x))
-
-# XOR dataset
-X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([[0],[1],[1],[0]])
-
-np.random.seed(42)
-W1 = np.random.randn(2, 4) * 0.5
-b1 = np.zeros((1, 4))
-W2 = np.random.randn(4, 1) * 0.5
-b2 = np.zeros((1, 1))
-lr = 0.5; losses = []
-
-for epoch in range(10000):
-    # Forward pass
-    z1 = X @ W1 + b1
-    a1 = sigmoid(z1)
-    z2 = a1 @ W2 + b2
-    a2 = sigmoid(z2)
-
-    # Loss
-    loss = np.mean((y - a2) ** 2)
-    losses.append(loss)
-
-    # Backward pass
-    d_a2 = -2*(y - a2)/y.shape[0]
-    d_z2 = d_a2 * sigmoid_d(z2)
-    dW2 = a1.T @ d_z2
-    db2 = np.sum(d_z2, axis=0, keepdims=True)
-    d_a1 = d_z2 @ W2.T
-    d_z1 = d_a1 * sigmoid_d(z1)
-    dW1 = X.T @ d_z1
-    db1 = np.sum(d_z1, axis=0, keepdims=True)
-
-    # Update weights
-    W2 -= lr * dW2; b2 -= lr * db2
-    W1 -= lr * dW1; b1 -= lr * db1
-
-    if epoch % 1000 == 0:
-        print(f'Epoch {epoch}: Loss={loss:.6f}')
-
-print('Predictions:', np.round(a2.T, 3))
-plt.plot(losses); plt.title('Loss Curve')
-plt.show()
-''',
-    ),
-    dict(
-        num=5,
-        page="i50.html",
-        title="Program 5: CNN Model for Image Classification",
-        aim="To train a Convolutional Neural Network (CNN) model for image "
-            "classification on the CIFAR-10 dataset and evaluate its performance "
-            "in terms of accuracy and loss.",
-        procedure=[
-            "Import TensorFlow/Keras and load CIFAR-10 dataset.",
-            "Normalize pixel values to range [0, 1].",
-            "Define CNN architecture: Conv2D -> MaxPool -> Conv2D -> MaxPool -> Dense layers.",
-            "Compile model with Adam optimizer and sparse categorical crossentropy loss.",
-            "Train model for 10 epochs with validation split.",
-            "Evaluate model on test set and plot training/validation accuracy.",
-            "Visualize sample predictions with true and predicted labels.",
-        ],
-        required={"tensorflow": "tensorflow", "matplotlib": "matplotlib", "numpy": "numpy"},
-        code='''import tensorflow as tf
-from tensorflow.keras import layers, models
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Load CIFAR-10
-(X_train, y_train), (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
-X_train, X_test = X_train/255.0, X_test/255.0
-classes = ['airplane','auto','bird','cat','deer','dog','frog','horse','ship','truck']
-
-# Build CNN
-model = models.Sequential([
-    layers.Conv2D(32, (3,3), activation='relu', input_shape=(32,32,3)),
-    layers.MaxPooling2D(2,2),
-    layers.Conv2D(64, (3,3), activation='relu'),
-    layers.MaxPooling2D(2,2),
-    layers.Conv2D(64, (3,3), activation='relu'),
-    layers.Flatten(),
-    layers.Dense(64, activation='relu'),
-    layers.Dense(10, activation='softmax')
-])
-
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-model.summary()
-
-history = model.fit(X_train, y_train, epochs=10, validation_split=0.1, batch_size=64)
-
-test_loss, test_acc = model.evaluate(X_test, y_test)
-print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc*100:.2f}%')
-
-plt.figure(figsize=(12,4))
-plt.subplot(1,2,1); plt.plot(history.history['accuracy'], label='Train')
-plt.plot(history.history['val_accuracy'], label='Val'); plt.title('Accuracy'); plt.legend()
-plt.subplot(1,2,2); plt.plot(history.history['loss'], label='Train')
-plt.plot(history.history['val_loss'], label='Val'); plt.title('Loss'); plt.legend()
-plt.show()
-''',
-    ),
-    dict(
-        num=6,
-        page="i60.html",
-        title="Program 6: Overfitting and Underfitting with Regularization",
-        aim="To analyze overfitting and underfitting in deep learning models and "
-            "apply regularization techniques (L1/L2, Dropout, Early Stopping) to "
-            "achieve better generalization.",
-        procedure=[
-            "Load dataset and create three models: underfitting (too simple), overfitting (no regularization), regularized.",
-            "Underfitting model: Single dense layer with few neurons.",
-            "Overfitting model: Deep network trained too long without regularization.",
-            "Regularized model: Add Dropout (0.5), L2 weight decay, and Early Stopping.",
-            "Train all three models and plot training vs validation accuracy curves.",
-            "Compare test accuracies to demonstrate effectiveness of regularization.",
-            "Visualize the gap between train/val loss for each model.",
-        ],
-        required={"tensorflow": "tensorflow", "matplotlib": "matplotlib", "numpy": "numpy"},
-        code='''import tensorflow as tf
-from tensorflow.keras import layers, models, regularizers, callbacks
-import matplotlib.pyplot as plt
-import numpy as np
-
-(X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
-X_train = X_train.reshape(-1, 784)/255.0
-X_test  = X_test.reshape(-1, 784)/255.0
-# Use only 2000 samples to exaggerate overfitting
-X_small, y_small = X_train[:2000], y_train[:2000]
-
-def make_model(kind='overfit'):
-    m = models.Sequential()
-    if kind == 'underfit':
-        m.add(layers.Dense(4, activation='relu', input_shape=(784,)))
-    elif kind == 'overfit':
-        for _ in range(5): m.add(layers.Dense(512, activation='relu'))
-    else:  # regularized
-        for _ in range(5):
-            m.add(layers.Dense(512, activation='relu',
-                  kernel_regularizer=regularizers.l2(0.001)))
-            m.add(layers.Dropout(0.5))
-    m.add(layers.Dense(10, activation='softmax'))
-    m.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    return m
-
-histories = {}
-early_stop = callbacks.EarlyStopping(patience=5, restore_best_weights=True)
-for kind in ['underfit', 'overfit', 'regularized']:
-    cb = [early_stop] if kind == 'regularized' else []
-    h = make_model(kind).fit(X_small, y_small, epochs=50,
-                             validation_split=0.2, verbose=0, callbacks=cb)
-    histories[kind] = h.history
-    train_acc = h.history["accuracy"][-1]
-    val_acc = max(h.history["val_accuracy"])
-    print(f'{kind}: train_acc={train_acc:.4f}, val_acc={val_acc:.4f}, gap={train_acc - val_acc:.4f}')
-
-# Plot training vs validation accuracy for each model
-fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-for ax, kind in zip(axes, ['underfit', 'overfit', 'regularized']):
-    ax.plot(histories[kind]['accuracy'], label='Train')
-    ax.plot(histories[kind]['val_accuracy'], label='Val')
-    ax.set_title(kind); ax.set_xlabel('Epoch'); ax.set_ylabel('Accuracy'); ax.legend()
-plt.tight_layout()
-plt.show()
-''',
-    ),
+    ("1", "i10.html", "Program1_Data_Cleaning_Preprocessing.ipynb", PENG),
+    ("2", "i20.html", "Program2_Exploratory_Data_Analysis.ipynb", MALL),
+    ("3", "i30.html", "Program3_Regression_Model.ipynb", PENG),
+    ("4", "i40.html", "Program4_Classification_Clustering.ipynb", MALL),
+    ("5", "i50.html", "Program5_Visualization_Matplotlib_Seaborn.ipynb", PENG),
+    ("6", "i60.html", "Program6_Interactive_Dashboard_Plotly.ipynb", MALL),
+    ("6B", "i65.html", "Program6B_Interactive_Dashboard_Dash.ipynb", MALL),
 ]
+
+# The Program 5 notebook (newer than the record) also computes ANOVA feature
+# importance and prints a final analysis summary - add matching steps.
+EXTRA_STEPS = {
+    "5": [
+        "Rank numeric features by how well they separate species using the one-way ANOVA F-statistic and plot it.",
+        "Print a final analysis summary (proportions, islands, top species per measurement, correlations).",
+    ],
+}
+
+# Tab title is deliberately neutral on every page (user preference, set in the
+# repo directly on 2026-09-09) so the tab never reveals what the page holds.
+TAB_TITLE = "htnkl"
 
 PAGE_CSS = "<style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style>"
 
 
-def full_code(prog):
-    return INSTALL_TEMPLATE.format(required=prog["required"]) + "\n" + prog["code"]
+def parse_record():
+    text = open(RECORD, encoding="utf-8").read()
+    sections = re.split(r"={70}\nPROGRAM (\w+)\n={70}\n", text)[1:]
+    out = {}
+    for num, body in zip(sections[::2], sections[1::2]):
+        title = re.search(r"^TITLE: (.+)$", body, re.M).group(1).strip()
+        aim = re.search(r"^AIM: (.+)$", body, re.M).group(1).strip()
+        proc = re.search(r"^PROCEDURE:\n(.*?)\n\n", body, re.S | re.M).group(1)
+        steps = [re.sub(r"^\s*\d+\.\s*", "", s) for s in proc.splitlines() if s.strip()]
+        out[num] = dict(title=title, aim=aim, procedure=steps + EXTRA_STEPS.get(num, []))
+    return out
 
 
-def block(prog):
+def full_code(nb_file):
+    nb = nbformat.read(os.path.join(OUT_DIR, nb_file), as_version=4)
+    setup, program = [c.source.rstrip() for c in nb.cells if c.cell_type == "code"][:2]
+    return setup + "\n\n" + program + "\n"
+
+
+def block(num, prog, code, dataset):
+    title = f"Program {num}: {prog['title']}"
     steps = "\n".join(f"{i}. {s}" for i, s in enumerate(prog["procedure"], start=1))
     return (
-        f"{prog['title']}\n"
-        f"{'=' * len(prog['title'])}\n\n"
+        f"{title}\n"
+        f"{'=' * len(title)}\n\n"
         f"Aim\n---\n{prog['aim']}\n\n"
+        f"Dataset: {dataset} (place it in the same folder as the notebook)\n\n"
         f"Procedure\n---------\n{steps}\n\n"
-        f"Code\n----\n{full_code(prog)}"
+        f"Code\n----\n{code}"
     )
 
 
@@ -411,12 +92,12 @@ def check_safe(text, where):
         raise ValueError(f"'-->' found in {where} - would break the HTML comment, fix source text")
 
 
-def write_page(filename, title, comment_body):
+def write_page(filename, comment_body):
     check_safe(comment_body, filename)
     html = (
         "<!doctype html>\n"
         "<html><head><meta charset=\"utf-8\">"
-        f"<title>{title}</title>{PAGE_CSS}</head>\n"
+        f"<title>{TAB_TITLE}</title>{PAGE_CSS}</head>\n"
         "<body>\n"
         "<!--\n"
         f"{comment_body}\n"
@@ -424,17 +105,19 @@ def write_page(filename, title, comment_body):
         "</body></html>\n"
     )
     path = os.path.join(OUT_DIR, filename)
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
     print("Wrote", path)
 
 
-# Individual program pages: i10.html .. i60.html
-for prog in PROGRAMS:
-    write_page(prog["page"], prog["title"], block(prog))
+record = parse_record()
+blocks = []
+for num, page, nb_file, dataset in PROGRAMS:
+    b = block(num, record[num], full_code(nb_file), dataset)
+    blocks.append(b)
+    write_page(page, b)
 
-# index.html: all 6 programs combined in one comment
-combined = "\n\n\n".join(block(p) for p in PROGRAMS)
-write_page("index.html", "DL Lab Programs", combined)
+# index.html: all programs combined in one comment
+write_page("index.html", "\n\n\n".join(blocks))
 
 print("Done.")

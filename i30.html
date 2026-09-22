@@ -2,68 +2,129 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 3: Activation Functions (ReLU, Sigmoid, Tanh)
-=====================================================
+Program 3: Develop a regression model and interpret the prediction results
+==========================================================================
 
 Aim
 ---
-To implement and visualize three major activation functions - ReLU, Sigmoid, and Tanh - and analyze their mathematical properties, gradients, and typical use cases in neural networks.
+To develop a Linear Regression model on the Penguins dataset to predict body mass and interpret the results using evaluation metrics and plots.
+
+Dataset: penguins_size.csv (place it in the same folder as the notebook)
 
 Procedure
 ---------
-1. Import numpy and matplotlib libraries.
-2. Define input range x from -10 to 10.
-3. Implement Sigmoid: f(x) = 1 / (1 + e^-x).
-4. Implement Tanh: f(x) = (e^x - e^-x) / (e^x + e^-x).
-5. Implement ReLU: f(x) = max(0, x).
-6. Compute derivatives of each activation function.
-7. Plot all functions and their derivatives in a 2x3 subplot grid.
+1. Import pandas, numpy, matplotlib, seaborn and scikit-learn modules.
+2. Load the penguins_size.csv dataset.
+3. Drop missing values and invalid sex entries.
+4. Encode categorical columns using LabelEncoder.
+5. Split data into features (X) and target (y = body_mass_g).
+6. Split into training and testing sets (80:20).
+7. Train a Linear Regression model on the training data.
+8. Predict body mass on the test data.
+9. Evaluate using MAE, MSE, RMSE and R2 Score.
+10. Compare actual vs predicted values in a table and scatter plot.
+11. Plot residuals and feature importance to interpret the model.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'sklearn': 'scikit-learn'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-x = np.linspace(-10, 10, 300)
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# Activation functions
-def sigmoid(x): return 1 / (1 + np.exp(-x))
-def sigmoid_deriv(x): s = sigmoid(x); return s * (1 - s)
+sns.set_style("whitegrid")
 
-def tanh(x): return np.tanh(x)
-def tanh_deriv(x): return 1 - np.tanh(x)**2
+# Load dataset
+df = pd.read_csv("penguins_size.csv")
+display(df.head())
 
-def relu(x): return np.maximum(0, x)
-def relu_deriv(x): return np.where(x > 0, 1, 0)
+print("Shape:", df.shape)
+print("\nMissing values:\n", df.isnull().sum())
 
-# Plot
-fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-funcs = [(sigmoid, sigmoid_deriv, 'Sigmoid', 'blue'),
-         (tanh, tanh_deriv, 'Tanh', 'green'),
-         (relu, relu_deriv, 'ReLU', 'red')]
+# Remove missing values
+df = df.dropna()
+df = df[df['sex'] != '.']
+print("Shape after cleaning:", df.shape)
 
-for i, (fn, dfn, name, color) in enumerate(funcs):
-    axes[0, i].plot(x, fn(x), color=color, linewidth=2)
-    axes[0, i].set_title(f'{name} Function'); axes[0, i].grid(True)
-    axes[1, i].plot(x, dfn(x), color=color, linestyle='--', linewidth=2)
-    axes[1, i].set_title(f'{name} Derivative'); axes[1, i].grid(True)
+# Encode categorical columns
+encoder = LabelEncoder()
+cat_cols = df.select_dtypes(exclude=np.number).columns
+for col in cat_cols:
+    df[col] = encoder.fit_transform(df[col])
+display(df.head())
 
-plt.tight_layout()
+# Features and target: predict body_mass_g
+X = df.drop("body_mass_g", axis=1)
+y = df["body_mass_g"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print("Training samples:", X_train.shape[0])
+print("Testing samples :", X_test.shape[0])
+
+# Train Linear Regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predict on test data
+y_pred = model.predict(X_test)
+
+# Evaluate model performance
+mae = mean_absolute_error(y_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
+rmse = np.sqrt(mse)
+r2 = r2_score(y_test, y_pred)
+
+print("Mean Absolute Error :", round(mae, 2))
+print("Mean Squared Error  :", round(mse, 2))
+print("Root Mean Squared Error :", round(rmse, 2))
+print("R2 Score :", round(r2, 3))
+
+# Compare actual vs predicted values
+results = pd.DataFrame({"Actual": y_test.values, "Predicted": np.round(y_pred, 2)})
+display(results.head(10))
+
+# Actual vs Predicted scatter plot
+plt.figure(figsize=(7, 6))
+plt.scatter(y_test, y_pred, color="royalblue")
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color="red", linewidth=2)
+plt.xlabel("Actual Body Mass (g)")
+plt.ylabel("Predicted Body Mass (g)")
+plt.title("Actual vs Predicted Body Mass")
 plt.show()
 
-# Print key values
-for fn, name in [(sigmoid, 'Sigmoid'), (tanh, 'Tanh'), (relu, 'ReLU')]:
-    print(f'{name}: f(0)={fn(np.array([0]))[0]:.4f}, f(2)={fn(np.array([2]))[0]:.4f}, f(-2)={fn(np.array([-2]))[0]:.4f}')
+# Residual plot
+residuals = y_test - y_pred
+plt.figure(figsize=(7, 6))
+sns.scatterplot(x=y_pred, y=residuals, color="green")
+plt.axhline(0, color="red", linestyle="--")
+plt.xlabel("Predicted Values")
+plt.ylabel("Residuals")
+plt.title("Residual Plot")
+plt.show()
+
+# Feature importance from regression coefficients
+importance = pd.DataFrame({"Feature": X.columns, "Coefficient": model.coef_})
+importance = importance.sort_values(by="Coefficient", key=abs, ascending=False)
+
+plt.figure(figsize=(7, 5))
+sns.barplot(x="Coefficient", y="Feature", data=importance)
+plt.title("Feature Importance (Regression Coefficients)")
+plt.show()
 
 -->
 </body></html>

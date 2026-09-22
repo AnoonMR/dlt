@@ -2,83 +2,117 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 1: Perceptron Model for Binary Classification
-=====================================================
+Program 1: Perform data cleaning and preprocessing on a dataset containing missing values and outliers
+======================================================================================================
 
 Aim
 ---
-To implement a perceptron model from scratch for binary classification and demonstrate how a single-layer neural network learns to separate linearly separable data.
+To clean and preprocess the Penguins dataset by handling missing values and detecting/treating outliers using the IQR method.
+
+Dataset: penguins_size.csv (place it in the same folder as the notebook)
 
 Procedure
 ---------
-1. Import necessary libraries: numpy for computation, matplotlib for plotting.
-2. Define the Perceptron class with weight initialization, predict(), and train() methods.
-3. Generate or use a simple binary classification dataset (e.g., AND gate or linearly separable points).
-4. Initialize perceptron with learning rate and number of epochs.
-5. Train the model using the perceptron learning rule: w = w + lr * (y - y_hat) * x.
-6. Track misclassification errors per epoch.
-7. Plot the decision boundary and training error convergence.
+1. Import pandas, numpy, matplotlib and seaborn.
+2. Load the penguins_size.csv dataset.
+3. Check dataset shape, info and missing values.
+4. Replace invalid entries (e.g. '.') with NaN.
+5. Fill missing numeric values with median and categorical values with mode.
+6. Drop duplicate rows.
+7. Detect outliers in numeric columns using the IQR method.
+8. Plot boxplots before treatment to visualize outliers.
+9. Cap outliers to the IQR lower/upper bounds (winsorizing).
+10. Plot boxplots after treatment and save the cleaned dataset.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-class Perceptron:
-    def __init__(self, learning_rate=0.1, n_epochs=100):
-        self.lr = learning_rate
-        self.n_epochs = n_epochs
-        self.weights = None
-        self.bias = None
-        self.errors = []
+sns.set_style("whitegrid")
 
-    def step_function(self, x):
-        return np.where(x >= 0, 1, 0)
+# Load dataset
+df = pd.read_csv("penguins_size.csv")
+display(df.head())
 
-    def train(self, X, y):
-        n_samples, n_features = X.shape
-        self.weights = np.zeros(n_features)
-        self.bias = 0
-        for epoch in range(self.n_epochs):
-            error_count = 0
-            for xi, yi in zip(X, y):
-                output = self.step_function(np.dot(xi, self.weights) + self.bias)
-                update = self.lr * (yi - output)
-                self.weights += update * xi
-                self.bias += update
-                error_count += int(update != 0)
-            self.errors.append(error_count)
+# Basic info
+print("Shape:", df.shape)
+print(df.info())
 
-    def predict(self, X):
-        return self.step_function(np.dot(X, self.weights) + self.bias)
+# Check missing values
+print("Missing values per column:")
+print(df.isnull().sum())
 
-# Dataset: OR gate
-X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([0, 1, 1, 1])
+# '.' is an invalid entry hiding in the sex column, treat it as missing
+df['sex'] = df['sex'].replace('.', np.nan)
+print(df['sex'].unique())
 
-p = Perceptron(learning_rate=0.1, n_epochs=20)
-p.train(X, y)
-predictions = p.predict(X)
+# Handle missing values: numeric columns -> median, categorical -> mode
+num_cols = df.select_dtypes(include=np.number).columns
+cat_cols = df.select_dtypes(exclude=np.number).columns
 
-print('Weights:', p.weights)
-print('Bias:', p.bias)
-print('Predictions:', predictions)
-print('Accuracy: {:.2f}%'.format(np.mean(predictions == y) * 100))
+for col in num_cols:
+    df[col] = df[col].fillna(df[col].median())
 
-plt.plot(range(1, len(p.errors)+1), p.errors, marker='o')
-plt.xlabel('Epoch'); plt.ylabel('Misclassifications')
-plt.title('Perceptron Training Error')
+for col in cat_cols:
+    df[col] = df[col].fillna(df[col].mode()[0])
+
+print("Missing values after cleaning:")
+print(df.isnull().sum())
+
+# Check for duplicate rows
+print("Duplicate rows:", df.duplicated().sum())
+df = df.drop_duplicates()
+
+# Outlier detection using IQR method
+def iqr_bounds(series):
+    q1 = series.quantile(0.25)
+    q3 = series.quantile(0.75)
+    iqr = q3 - q1
+    return q1 - 1.5 * iqr, q3 + 1.5 * iqr
+
+for col in num_cols:
+    lower, upper = iqr_bounds(df[col])
+    outliers = df[(df[col] < lower) | (df[col] > upper)]
+    print(f"{col}: {len(outliers)} outliers (bounds: {lower:.2f}, {upper:.2f})")
+
+# Boxplots before outlier treatment
+fig, axes = plt.subplots(1, len(num_cols), figsize=(4*len(num_cols), 4))
+for ax, col in zip(axes, num_cols):
+    sns.boxplot(y=df[col], ax=ax)
+    ax.set_title(col)
+plt.tight_layout()
 plt.show()
+
+# Treat outliers by capping to IQR bounds (winsorizing)
+for col in num_cols:
+    lower, upper = iqr_bounds(df[col])
+    df[col] = np.clip(df[col], lower, upper)
+
+# Boxplots after outlier treatment
+fig, axes = plt.subplots(1, len(num_cols), figsize=(4*len(num_cols), 4))
+for ax, col in zip(axes, num_cols):
+    sns.boxplot(y=df[col], ax=ax)
+    ax.set_title(col)
+plt.tight_layout()
+plt.show()
+
+# Final cleaned dataset
+print(df.describe())
+df.to_csv("penguins_cleaned.csv", index=False)
+print("\nCleaned dataset saved as penguins_cleaned.csv")
 
 -->
 </body></html>

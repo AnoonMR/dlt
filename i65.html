@@ -1,0 +1,174 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 6B: Develop an interactive visualization/dashboard using Plotly or Tableau (alternate version)
+======================================================================================================
+
+Aim
+---
+To develop an interactive dashboard using Plotly and Dash on the Mall Customers dataset that segments customers using K-Means clustering and lets the user filter all charts by gender.
+
+Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
+
+Procedure
+---------
+1. Import pandas, numpy, plotly.express, plotly.graph_objects, scikit-learn and dash modules.
+2. Load the Mall_Customers.csv dataset and check missing values.
+3. Apply K-Means clustering (K=5) on Income and Spending Score.
+4. Define a reusable function to build scatter, bar, box and pie charts for a given dataframe.
+5. Preview the standalone scatter, bar, box and pie charts for the full dataset.
+6. Build the Dash app layout with a title and a gender-filter dropdown.
+7. Add a callback that rebuilds all four charts based on the selected gender.
+8. Run the Dash app inline inside the notebook using jupyter_mode='inline'.
+9. Interact with the dropdown filter and verify all charts update correctly.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'plotly': 'plotly', 'sklearn': 'scikit-learn', 'dash': 'dash', 'nbformat': 'nbformat'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from dash import Dash, dcc, html, Input, Output
+
+# Load dataset
+df = pd.read_csv("Mall_Customers.csv")
+print("Shape:", df.shape)
+print("\nMissing values:\n", df.isnull().sum())
+display(df.head())
+
+# Apply K-Means clustering (K=5) on Income and Spending Score
+X = df[["Annual Income (k$)", "Spending Score (1-100)"]]
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
+df["Cluster"] = kmeans.fit_predict(X_scaled).astype(str)
+
+print("\nCluster distribution:")
+print(df["Cluster"].value_counts().sort_index())
+
+# Build the four dashboard charts for a given (possibly filtered) dataframe
+def build_charts(data):
+    scatter = px.scatter(
+        data,
+        x="Annual Income (k$)",
+        y="Spending Score (1-100)",
+        color="Cluster",
+        symbol="Gender",
+        hover_data=["Age"],
+        title="Annual Income vs Spending Score",
+        color_discrete_sequence=px.colors.qualitative.Set1
+    )
+    scatter.update_traces(marker=dict(size=9, opacity=0.8))
+
+    counts = data["Cluster"].value_counts().reset_index()
+    counts.columns = ["Cluster", "Count"]
+    bar = px.bar(
+        counts.sort_values("Cluster"),
+        x="Cluster",
+        y="Count",
+        color="Cluster",
+        title="Number of Customers per Cluster",
+        color_discrete_sequence=px.colors.qualitative.Set1,
+        text="Count"
+    )
+    bar.update_traces(textposition="outside")
+
+    box = px.box(
+        data,
+        x="Gender",
+        y="Spending Score (1-100)",
+        color="Gender",
+        title="Spending Score Distribution by Gender",
+        points="all"
+    )
+
+    g_counts = data["Gender"].value_counts().reset_index()
+    g_counts.columns = ["Gender", "Count"]
+    pie = px.pie(
+        g_counts,
+        names="Gender",
+        values="Count",
+        title="Gender Distribution of Customers",
+        color_discrete_sequence=px.colors.qualitative.Pastel
+    )
+
+    return scatter, bar, box, pie
+
+# Annual Income vs Spending Score by Cluster (standalone preview)
+fig_scatter, fig_bar, fig_box, fig_pie = build_charts(df)
+
+fig_scatter.show()
+
+# Number of customers per cluster
+fig_bar.show()
+
+# Spending Score distribution by Gender
+fig_box.show()
+
+# Gender distribution of customers
+fig_pie.show()
+
+# Dash Interactive Dashboard
+app = Dash(__name__)
+
+app.layout = html.Div([
+    html.H1("Mall Customer Dashboard",
+            style={"textAlign": "center", "fontFamily": "Arial", "color": "#2c3e50"}),
+
+    html.Div([
+        html.Label("Filter by Gender:", style={"fontWeight": "bold"}),
+        dcc.Dropdown(
+            id="gender-filter",
+            options=[{"label": "All", "value": "All"}] +
+                    [{"label": g, "value": g} for g in df["Gender"].unique()],
+            value="All",
+            clearable=False,
+            style={"width": "250px"}
+        )
+    ], style={"margin": "20px"}),
+
+    html.Div([
+        dcc.Graph(id="scatter-plot", style={"display": "inline-block", "width": "49%"}),
+        dcc.Graph(id="bar-chart",   style={"display": "inline-block", "width": "49%"})
+    ]),
+
+    html.Div([
+        dcc.Graph(id="box-plot", style={"display": "inline-block", "width": "49%"}),
+        dcc.Graph(id="pie-chart", style={"display": "inline-block", "width": "49%"})
+    ])
+], style={"fontFamily": "Arial"})
+
+
+@app.callback(
+    Output("scatter-plot", "figure"),
+    Output("bar-chart",   "figure"),
+    Output("box-plot",    "figure"),
+    Output("pie-chart",   "figure"),
+    Input("gender-filter", "value")
+)
+def update_dashboard(selected_gender):
+    filtered = df if selected_gender == "All" else df[df["Gender"] == selected_gender]
+    return build_charts(filtered)
+
+# Run the Dash app inline inside the notebook (no separate browser/terminal needed).
+# jupyter_mode="inline" starts the server in a background thread and renders it
+# as an embedded frame in the output, so this cell does not block/hang like a
+# plain app.run(debug=True) would.
+app.run(jupyter_mode="inline", port=8060, debug=False)
+
+-->
+</body></html>

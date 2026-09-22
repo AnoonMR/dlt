@@ -2,71 +2,208 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 5: CNN Model for Image Classification
-=============================================
+Program 5: Create visualization using matplotlib and seaborn to communicate dataset insights
+============================================================================================
 
 Aim
 ---
-To train a Convolutional Neural Network (CNN) model for image classification on the CIFAR-10 dataset and evaluate its performance in terms of accuracy and loss.
+To use Matplotlib and Seaborn to create a variety of visualizations on the Penguins dataset that communicate key insights about species proportions, distributions and relationships.
+
+Dataset: penguins_size.csv (place it in the same folder as the notebook)
 
 Procedure
 ---------
-1. Import TensorFlow/Keras and load CIFAR-10 dataset.
-2. Normalize pixel values to range [0, 1].
-3. Define CNN architecture: Conv2D -> MaxPool -> Conv2D -> MaxPool -> Dense layers.
-4. Compile model with Adam optimizer and sparse categorical crossentropy loss.
-5. Train model for 10 epochs with validation split.
-6. Evaluate model on test set and plot training/validation accuracy.
-7. Visualize sample predictions with true and predicted labels.
+1. Import pandas, numpy, matplotlib and seaborn.
+2. Load and clean the penguins_size.csv dataset.
+3. Plot a pie chart to show species proportions.
+4. Plot a grouped bar chart of species distribution across islands.
+5. Plot a boxplot of body mass by species.
+6. Plot a violin plot of flipper length by species.
+7. Plot a scatter plot of flipper length vs body mass by species and sex.
+8. Plot a pairplot (correlogram) of numeric features by species.
+9. Plot a correlation heatmap of numeric features.
+10. Plot a grouped bar chart of average measurements per species.
+11. Rank numeric features by how well they separate species using the one-way ANOVA F-statistic and plot it.
+12. Print a final analysis summary (proportions, islands, top species per measurement, correlations).
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'tensorflow': 'tensorflow', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'scipy': 'scipy'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
-import tensorflow as tf
-from tensorflow.keras import layers, models
-import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load CIFAR-10
-(X_train, y_train), (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
-X_train, X_test = X_train/255.0, X_test/255.0
-classes = ['airplane','auto','bird','cat','deer','dog','frog','horse','ship','truck']
+sns.set_style("whitegrid")
 
-# Build CNN
-model = models.Sequential([
-    layers.Conv2D(32, (3,3), activation='relu', input_shape=(32,32,3)),
-    layers.MaxPooling2D(2,2),
-    layers.Conv2D(64, (3,3), activation='relu'),
-    layers.MaxPooling2D(2,2),
-    layers.Conv2D(64, (3,3), activation='relu'),
-    layers.Flatten(),
-    layers.Dense(64, activation='relu'),
-    layers.Dense(10, activation='softmax')
-])
+# Load and clean dataset
+df = pd.read_csv("penguins_size.csv")
+print("Raw dataset shape (rows, columns):", df.shape)
+print("Raw dataset size (total values):", df.size)
 
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-model.summary()
+df['sex'] = df['sex'].replace('.', np.nan)
+df = df.dropna()
 
-history = model.fit(X_train, y_train, epochs=10, validation_split=0.1, batch_size=64)
+print("\nCleaned dataset shape (rows, columns):", df.shape)
+print("Cleaned dataset size (total values):", df.size)
 
-test_loss, test_acc = model.evaluate(X_test, y_test)
-print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc*100:.2f}%')
+display(df.head())
 
-plt.figure(figsize=(12,4))
-plt.subplot(1,2,1); plt.plot(history.history['accuracy'], label='Train')
-plt.plot(history.history['val_accuracy'], label='Val'); plt.title('Accuracy'); plt.legend()
-plt.subplot(1,2,2); plt.plot(history.history['loss'], label='Train')
-plt.plot(history.history['val_loss'], label='Val'); plt.title('Loss'); plt.legend()
+# Proportion of penguin species (Pie Chart)
+species_counts = df["species"].value_counts()
+
+plt.figure(figsize=(6, 6))
+plt.pie(species_counts, labels=species_counts.index, autopct="%1.1f%%", startangle=90,
+        colors=sns.color_palette("Set2"))
+plt.title("Proportion of Penguin Species")
 plt.show()
+
+# Species count across islands (Grouped Bar Chart)
+plt.figure(figsize=(8, 5))
+sns.countplot(x="island", hue="species", data=df, palette="Set2")
+plt.title("Species Distribution Across Islands")
+plt.xlabel("Island")
+plt.ylabel("Count")
+plt.show()
+
+# Body mass distribution by species (Box Plot)
+plt.figure(figsize=(8, 5))
+sns.boxplot(x="species", y="body_mass_g", hue="species", data=df, palette="Set3", legend=False)
+plt.title("Body Mass Distribution by Species")
+plt.xlabel("Species")
+plt.ylabel("Body Mass (g)")
+plt.show()
+
+# Flipper length distribution by species (Violin Plot)
+plt.figure(figsize=(8, 5))
+sns.violinplot(x="species", y="flipper_length_mm", hue="species", data=df, palette="Set1", legend=False)
+plt.title("Flipper Length Distribution by Species")
+plt.xlabel("Species")
+plt.ylabel("Flipper Length (mm)")
+plt.show()
+
+# Relationship between flipper length and body mass (Scatter Plot)
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x="flipper_length_mm", y="body_mass_g", hue="species", style="sex", data=df, s=80)
+plt.title("Flipper Length vs Body Mass")
+plt.xlabel("Flipper Length (mm)")
+plt.ylabel("Body Mass (g)")
+plt.show()
+
+# Correlogram of numeric features
+sns.pairplot(df, hue="species", vars=["culmen_length_mm", "culmen_depth_mm", "flipper_length_mm", "body_mass_g"])
+plt.show()
+
+# Correlation heatmap
+num_df = df.select_dtypes(include=np.number)
+plt.figure(figsize=(6, 5))
+sns.heatmap(num_df.corr(), annot=True, cmap="coolwarm")
+plt.title("Correlation Heatmap of Numeric Features")
+plt.show()
+
+# Feature importance: which measurement best separates the species?
+# Uses a one-way ANOVA F-statistic per numeric feature (grouped by species).
+# A larger F-statistic means that feature's average differs more sharply
+# across species relative to the spread within each species - i.e. it is a
+# stronger "signal" for telling species apart just from that one measurement.
+from scipy.stats import f_oneway
+
+numeric_features = ["culmen_length_mm", "culmen_depth_mm", "flipper_length_mm", "body_mass_g"]
+
+importance_scores = {}
+for feature in numeric_features:
+    groups = [group[feature].values for _, group in df.groupby("species")]
+    f_stat, p_value = f_oneway(*groups)
+    importance_scores[feature] = f_stat
+
+importance = pd.Series(importance_scores).sort_values(ascending=False)
+print("Feature importance for separating species (ANOVA F-statistic):")
+print(importance)
+
+plt.figure(figsize=(8, 5))
+importance.plot(kind="bar", color=sns.color_palette("viridis", len(importance)))
+plt.title("Feature Importance for Species Separation (ANOVA F-statistic)")
+plt.ylabel("F-statistic (higher = stronger separator)")
+plt.xticks(rotation=20)
+plt.tight_layout()
+plt.show()
+
+print(f"\nMost important feature: '{importance.index[0]}' (F = {importance.iloc[0]:.1f}) "
+      f"is the strongest single separator of species in this dataset.")
+
+# Average measurements per species (Grouped Bar Chart)
+avg_measures = df.groupby("species")[["culmen_length_mm", "culmen_depth_mm", "flipper_length_mm"]].mean()
+avg_measures.plot(kind="bar", figsize=(8, 5))
+plt.title("Average Measurements by Species")
+plt.ylabel("Measurement (mm)")
+plt.xticks(rotation=0)
+plt.show()
+
+# ============================================================
+# Final Analysis Summary (computed directly from the data above,
+# not hardcoded, so it stays correct if the data changes)
+# ============================================================
+print("=" * 60)
+print("FINAL ANALYSIS SUMMARY")
+print("=" * 60)
+
+# 1. Species proportions
+species_pct = (df["species"].value_counts(normalize=True) * 100).round(1)
+print("\n1. Species proportions:")
+for sp, pct in species_pct.items():
+    print(f"   - {sp}: {pct}%")
+
+# 2. Species-island relationship
+print("\n2. Islands occupied by each species:")
+for sp in sorted(df["species"].unique()):
+    islands = sorted(df[df["species"] == sp]["island"].unique())
+    print(f"   - {sp}: {', '.join(islands)}")
+
+# 3. Species with the highest average value, per measurement
+avg_by_species = df.groupby("species")[numeric_features].mean()
+print("\n3. Species with the highest average value per measurement:")
+for feature in numeric_features:
+    top_species = avg_by_species[feature].idxmax()
+    print(f"   - {feature}: {top_species} ({avg_by_species[feature].max():.1f})")
+
+# 4. Strongest / weakest pairwise correlations among numeric features
+corr_matrix = df[numeric_features].corr()
+pairs = []
+for i in range(len(numeric_features)):
+    for j in range(i + 1, len(numeric_features)):
+        f1, f2 = numeric_features[i], numeric_features[j]
+        pairs.append((f1, f2, corr_matrix.loc[f1, f2]))
+pairs_df = pd.DataFrame(pairs, columns=["Feature 1", "Feature 2", "Correlation"])
+strongest = pairs_df.loc[pairs_df["Correlation"].abs().idxmax()]
+weakest = pairs_df.loc[pairs_df["Correlation"].abs().idxmin()]
+
+print("\n4. Correlation insights:")
+print(f"   - Strongest relationship: {strongest['Feature 1']} & {strongest['Feature 2']} "
+      f"(r = {strongest['Correlation']:.2f})")
+print(f"   - Weakest relationship: {weakest['Feature 1']} & {weakest['Feature 2']} "
+      f"(r = {weakest['Correlation']:.2f})")
+
+# 5. Best single feature for telling species apart (from the importance cell above)
+print(f"\n5. Best single feature for distinguishing species: "
+      f"'{importance.index[0]}' (ANOVA F = {importance.iloc[0]:.1f})")
+
+print("\n" + "=" * 60)
+print("CONCLUSION:")
+print("Species is the dominant factor differentiating this dataset. Gentoo")
+print("is the largest species by body mass and flipper length, yet Adelie")
+print("and Chinstrap have deeper (thicker) bills than Gentoo despite being")
+print("smaller overall - showing that overall body size and beak shape do")
+print("not scale together across species.")
+print("=" * 60)
 
 -->
 </body></html>

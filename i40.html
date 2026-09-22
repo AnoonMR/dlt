@@ -2,84 +2,115 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 4: Backpropagation for Neural Network Training
-======================================================
+Program 4: Apply classification or clustering techniques to solve a data driven problem and analyze the outcomes
+================================================================================================================
 
 Aim
 ---
-To implement backpropagation from scratch for training a simple feedforward neural network and analyze the behavior of the loss function during training.
+To apply K-Means clustering on the Mall Customers dataset to segment customers based on income and spending score, and analyze the resulting clusters.
+
+Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
 
 Procedure
 ---------
-1. Define neural network architecture with one hidden layer.
-2. Initialize weights and biases randomly using numpy.
-3. Implement forward pass: compute activations at each layer.
-4. Define Mean Squared Error (MSE) loss function.
-5. Implement backward pass: compute gradients using chain rule.
-6. Update weights with gradient descent.
-7. Train on XOR problem and plot loss curve over epochs.
+1. Import pandas, numpy, matplotlib, seaborn and scikit-learn modules.
+2. Load the Mall_Customers.csv dataset.
+3. Check missing values and duplicates.
+4. Select Annual Income and Spending Score as clustering features.
+5. Scale the features using StandardScaler.
+6. Use the Elbow Method to find the optimal number of clusters.
+7. Apply K-Means clustering with K = 5.
+8. Visualize the clusters and centroids on a scatter plot.
+9. Analyze cluster-wise averages and customer counts per cluster.
+10. Evaluate clustering quality using the Silhouette Score.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'sklearn': 'scikit-learn'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Sigmoid and its derivative
-def sigmoid(x): return 1 / (1 + np.exp(-x))
-def sigmoid_d(x): return sigmoid(x) * (1 - sigmoid(x))
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
 
-# XOR dataset
-X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([[0],[1],[1],[0]])
+sns.set_style("whitegrid")
 
-np.random.seed(42)
-W1 = np.random.randn(2, 4) * 0.5
-b1 = np.zeros((1, 4))
-W2 = np.random.randn(4, 1) * 0.5
-b2 = np.zeros((1, 1))
-lr = 0.5; losses = []
+# Load dataset
+df = pd.read_csv("Mall_Customers.csv")
+display(df.head())
 
-for epoch in range(10000):
-    # Forward pass
-    z1 = X @ W1 + b1
-    a1 = sigmoid(z1)
-    z2 = a1 @ W2 + b2
-    a2 = sigmoid(z2)
+print("Shape:", df.shape)
+print("\nMissing values:\n", df.isnull().sum())
+print("Duplicate rows:", df.duplicated().sum())
 
-    # Loss
-    loss = np.mean((y - a2) ** 2)
-    losses.append(loss)
+display(df.describe())
 
-    # Backward pass
-    d_a2 = -2*(y - a2)/y.shape[0]
-    d_z2 = d_a2 * sigmoid_d(z2)
-    dW2 = a1.T @ d_z2
-    db2 = np.sum(d_z2, axis=0, keepdims=True)
-    d_a1 = d_z2 @ W2.T
-    d_z1 = d_a1 * sigmoid_d(z1)
-    dW1 = X.T @ d_z1
-    db1 = np.sum(d_z1, axis=0, keepdims=True)
+# Select features for clustering
+X = df[["Annual Income (k$)", "Spending Score (1-100)"]]
+display(X.head())
 
-    # Update weights
-    W2 -= lr * dW2; b2 -= lr * db2
-    W1 -= lr * dW1; b1 -= lr * db1
+# Scale features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
-    if epoch % 1000 == 0:
-        print(f'Epoch {epoch}: Loss={loss:.6f}')
+# Elbow method to find optimal number of clusters
+wcss = []
+for i in range(1, 11):
+    kmeans = KMeans(n_clusters=i, random_state=42, n_init=10)
+    kmeans.fit(X_scaled)
+    wcss.append(kmeans.inertia_)
 
-print('Predictions:', np.round(a2.T, 3))
-plt.plot(losses); plt.title('Loss Curve')
+plt.figure(figsize=(8, 5))
+plt.plot(range(1, 11), wcss, marker="o")
+plt.xlabel("Number of Clusters (K)")
+plt.ylabel("WCSS")
+plt.title("Elbow Method")
 plt.show()
+
+# Apply K-Means with K = 5
+kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
+df["Cluster"] = kmeans.fit_predict(X_scaled)
+display(df.head())
+
+# Visualize the clusters
+centers = scaler.inverse_transform(kmeans.cluster_centers_)
+
+plt.figure(figsize=(9, 7))
+sns.scatterplot(data=df, x="Annual Income (k$)", y="Spending Score (1-100)", hue="Cluster", palette="Set1", s=100)
+plt.scatter(centers[:, 0], centers[:, 1], color="black", marker="X", s=200, label="Centroids")
+plt.title("Customer Segments (K-Means Clustering)")
+plt.legend()
+plt.show()
+
+# Cluster-wise summary
+cluster_summary = df.groupby("Cluster")[["Age", "Annual Income (k$)", "Spending Score (1-100)"]].mean()
+print(cluster_summary)
+
+# Number of customers per cluster
+cluster_counts = df["Cluster"].value_counts().sort_index()
+plt.figure(figsize=(7, 5))
+cluster_counts.plot(kind="bar")
+plt.title("Number of Customers in Each Cluster")
+plt.xlabel("Cluster")
+plt.ylabel("Count")
+plt.xticks(rotation=0)
+plt.show()
+
+# Evaluate clustering using Silhouette Score
+score = silhouette_score(X_scaled, df["Cluster"])
+print("Silhouette Score:", round(score, 3))
 
 -->
 </body></html>

@@ -2,441 +2,924 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 1: Perceptron Model for Binary Classification
-=====================================================
+Program 1: Perform data cleaning and preprocessing on a dataset containing missing values and outliers
+======================================================================================================
 
 Aim
 ---
-To implement a perceptron model from scratch for binary classification and demonstrate how a single-layer neural network learns to separate linearly separable data.
+To clean and preprocess the Penguins dataset by handling missing values and detecting/treating outliers using the IQR method.
+
+Dataset: penguins_size.csv (place it in the same folder as the notebook)
 
 Procedure
 ---------
-1. Import necessary libraries: numpy for computation, matplotlib for plotting.
-2. Define the Perceptron class with weight initialization, predict(), and train() methods.
-3. Generate or use a simple binary classification dataset (e.g., AND gate or linearly separable points).
-4. Initialize perceptron with learning rate and number of epochs.
-5. Train the model using the perceptron learning rule: w = w + lr * (y - y_hat) * x.
-6. Track misclassification errors per epoch.
-7. Plot the decision boundary and training error convergence.
+1. Import pandas, numpy, matplotlib and seaborn.
+2. Load the penguins_size.csv dataset.
+3. Check dataset shape, info and missing values.
+4. Replace invalid entries (e.g. '.') with NaN.
+5. Fill missing numeric values with median and categorical values with mode.
+6. Drop duplicate rows.
+7. Detect outliers in numeric columns using the IQR method.
+8. Plot boxplots before treatment to visualize outliers.
+9. Cap outliers to the IQR lower/upper bounds (winsorizing).
+10. Plot boxplots after treatment and save the cleaned dataset.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-class Perceptron:
-    def __init__(self, learning_rate=0.1, n_epochs=100):
-        self.lr = learning_rate
-        self.n_epochs = n_epochs
-        self.weights = None
-        self.bias = None
-        self.errors = []
+sns.set_style("whitegrid")
 
-    def step_function(self, x):
-        return np.where(x >= 0, 1, 0)
+# Load dataset
+df = pd.read_csv("penguins_size.csv")
+display(df.head())
 
-    def train(self, X, y):
-        n_samples, n_features = X.shape
-        self.weights = np.zeros(n_features)
-        self.bias = 0
-        for epoch in range(self.n_epochs):
-            error_count = 0
-            for xi, yi in zip(X, y):
-                output = self.step_function(np.dot(xi, self.weights) + self.bias)
-                update = self.lr * (yi - output)
-                self.weights += update * xi
-                self.bias += update
-                error_count += int(update != 0)
-            self.errors.append(error_count)
+# Basic info
+print("Shape:", df.shape)
+print(df.info())
 
-    def predict(self, X):
-        return self.step_function(np.dot(X, self.weights) + self.bias)
+# Check missing values
+print("Missing values per column:")
+print(df.isnull().sum())
 
-# Dataset: OR gate
-X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([0, 1, 1, 1])
+# '.' is an invalid entry hiding in the sex column, treat it as missing
+df['sex'] = df['sex'].replace('.', np.nan)
+print(df['sex'].unique())
 
-p = Perceptron(learning_rate=0.1, n_epochs=20)
-p.train(X, y)
-predictions = p.predict(X)
+# Handle missing values: numeric columns -> median, categorical -> mode
+num_cols = df.select_dtypes(include=np.number).columns
+cat_cols = df.select_dtypes(exclude=np.number).columns
 
-print('Weights:', p.weights)
-print('Bias:', p.bias)
-print('Predictions:', predictions)
-print('Accuracy: {:.2f}%'.format(np.mean(predictions == y) * 100))
+for col in num_cols:
+    df[col] = df[col].fillna(df[col].median())
 
-plt.plot(range(1, len(p.errors)+1), p.errors, marker='o')
-plt.xlabel('Epoch'); plt.ylabel('Misclassifications')
-plt.title('Perceptron Training Error')
-plt.show()
+for col in cat_cols:
+    df[col] = df[col].fillna(df[col].mode()[0])
 
+print("Missing values after cleaning:")
+print(df.isnull().sum())
 
+# Check for duplicate rows
+print("Duplicate rows:", df.duplicated().sum())
+df = df.drop_duplicates()
 
-Program 2: Multi-Layer Perceptron (MLP) on a Dataset
-====================================================
+# Outlier detection using IQR method
+def iqr_bounds(series):
+    q1 = series.quantile(0.25)
+    q3 = series.quantile(0.75)
+    iqr = q3 - q1
+    return q1 - 1.5 * iqr, q3 + 1.5 * iqr
 
-Aim
----
-To train a Multi-Layer Perceptron (MLP) model on a real-world dataset (Iris or MNIST) and analyze its classification accuracy.
+for col in num_cols:
+    lower, upper = iqr_bounds(df[col])
+    outliers = df[(df[col] < lower) | (df[col] > upper)]
+    print(f"{col}: {len(outliers)} outliers (bounds: {lower:.2f}, {upper:.2f})")
 
-Procedure
----------
-1. Import sklearn, numpy, and matplotlib libraries.
-2. Load the Iris dataset and split it into training and testing sets (80/20 split).
-3. Standardize features using StandardScaler.
-4. Create an MLPClassifier with hidden layers, ReLU activation, and adam optimizer.
-5. Train the model on training data and evaluate on test data.
-6. Print classification report with precision, recall, F1-score.
-7. Plot the confusion matrix and training loss curve.
-
-Code
-----
-# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
-import importlib, subprocess, sys
-
-required = {'sklearn': 'scikit-learn', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
-for import_name, pip_name in required.items():
-    try:
-        importlib.import_module(import_name)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
-
-from sklearn.neural_network import MLPClassifier
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, confusion_matrix
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Load and prepare data
-data = load_iris()
-X, y = data.data, data.target
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-
-# Build and train MLP
-mlp = MLPClassifier(hidden_layer_sizes=(100, 50), activation='relu',
-                    solver='adam', max_iter=500, random_state=42)
-mlp.fit(X_train, y_train)
-
-# Evaluation
-y_pred = mlp.predict(X_test)
-print('Classification Report:')
-print(classification_report(y_test, y_pred, target_names=data.target_names))
-print('Confusion Matrix:')
-print(confusion_matrix(y_test, y_pred))
-print(f'Test Accuracy: {mlp.score(X_test, y_test)*100:.2f}%')
-
-# Plot loss curve
-plt.plot(mlp.loss_curve_)
-plt.title('MLP Training Loss Curve')
-plt.xlabel('Iterations'); plt.ylabel('Loss')
-plt.show()
-
-
-
-Program 3: Activation Functions (ReLU, Sigmoid, Tanh)
-=====================================================
-
-Aim
----
-To implement and visualize three major activation functions - ReLU, Sigmoid, and Tanh - and analyze their mathematical properties, gradients, and typical use cases in neural networks.
-
-Procedure
----------
-1. Import numpy and matplotlib libraries.
-2. Define input range x from -10 to 10.
-3. Implement Sigmoid: f(x) = 1 / (1 + e^-x).
-4. Implement Tanh: f(x) = (e^x - e^-x) / (e^x + e^-x).
-5. Implement ReLU: f(x) = max(0, x).
-6. Compute derivatives of each activation function.
-7. Plot all functions and their derivatives in a 2x3 subplot grid.
-
-Code
-----
-# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
-import importlib, subprocess, sys
-
-required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
-for import_name, pip_name in required.items():
-    try:
-        importlib.import_module(import_name)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-x = np.linspace(-10, 10, 300)
-
-# Activation functions
-def sigmoid(x): return 1 / (1 + np.exp(-x))
-def sigmoid_deriv(x): s = sigmoid(x); return s * (1 - s)
-
-def tanh(x): return np.tanh(x)
-def tanh_deriv(x): return 1 - np.tanh(x)**2
-
-def relu(x): return np.maximum(0, x)
-def relu_deriv(x): return np.where(x > 0, 1, 0)
-
-# Plot
-fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-funcs = [(sigmoid, sigmoid_deriv, 'Sigmoid', 'blue'),
-         (tanh, tanh_deriv, 'Tanh', 'green'),
-         (relu, relu_deriv, 'ReLU', 'red')]
-
-for i, (fn, dfn, name, color) in enumerate(funcs):
-    axes[0, i].plot(x, fn(x), color=color, linewidth=2)
-    axes[0, i].set_title(f'{name} Function'); axes[0, i].grid(True)
-    axes[1, i].plot(x, dfn(x), color=color, linestyle='--', linewidth=2)
-    axes[1, i].set_title(f'{name} Derivative'); axes[1, i].grid(True)
-
+# Boxplots before outlier treatment
+fig, axes = plt.subplots(1, len(num_cols), figsize=(4*len(num_cols), 4))
+for ax, col in zip(axes, num_cols):
+    sns.boxplot(y=df[col], ax=ax)
+    ax.set_title(col)
 plt.tight_layout()
 plt.show()
 
-# Print key values
-for fn, name in [(sigmoid, 'Sigmoid'), (tanh, 'Tanh'), (relu, 'ReLU')]:
-    print(f'{name}: f(0)={fn(np.array([0]))[0]:.4f}, f(2)={fn(np.array([2]))[0]:.4f}, f(-2)={fn(np.array([-2]))[0]:.4f}')
+# Treat outliers by capping to IQR bounds (winsorizing)
+for col in num_cols:
+    lower, upper = iqr_bounds(df[col])
+    df[col] = np.clip(df[col], lower, upper)
 
-
-
-Program 4: Backpropagation for Neural Network Training
-======================================================
-
-Aim
----
-To implement backpropagation from scratch for training a simple feedforward neural network and analyze the behavior of the loss function during training.
-
-Procedure
----------
-1. Define neural network architecture with one hidden layer.
-2. Initialize weights and biases randomly using numpy.
-3. Implement forward pass: compute activations at each layer.
-4. Define Mean Squared Error (MSE) loss function.
-5. Implement backward pass: compute gradients using chain rule.
-6. Update weights with gradient descent.
-7. Train on XOR problem and plot loss curve over epochs.
-
-Code
-----
-# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
-import importlib, subprocess, sys
-
-required = {'numpy': 'numpy', 'matplotlib': 'matplotlib'}
-for import_name, pip_name in required.items():
-    try:
-        importlib.import_module(import_name)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Sigmoid and its derivative
-def sigmoid(x): return 1 / (1 + np.exp(-x))
-def sigmoid_d(x): return sigmoid(x) * (1 - sigmoid(x))
-
-# XOR dataset
-X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([[0],[1],[1],[0]])
-
-np.random.seed(42)
-W1 = np.random.randn(2, 4) * 0.5
-b1 = np.zeros((1, 4))
-W2 = np.random.randn(4, 1) * 0.5
-b2 = np.zeros((1, 1))
-lr = 0.5; losses = []
-
-for epoch in range(10000):
-    # Forward pass
-    z1 = X @ W1 + b1
-    a1 = sigmoid(z1)
-    z2 = a1 @ W2 + b2
-    a2 = sigmoid(z2)
-
-    # Loss
-    loss = np.mean((y - a2) ** 2)
-    losses.append(loss)
-
-    # Backward pass
-    d_a2 = -2*(y - a2)/y.shape[0]
-    d_z2 = d_a2 * sigmoid_d(z2)
-    dW2 = a1.T @ d_z2
-    db2 = np.sum(d_z2, axis=0, keepdims=True)
-    d_a1 = d_z2 @ W2.T
-    d_z1 = d_a1 * sigmoid_d(z1)
-    dW1 = X.T @ d_z1
-    db1 = np.sum(d_z1, axis=0, keepdims=True)
-
-    # Update weights
-    W2 -= lr * dW2; b2 -= lr * db2
-    W1 -= lr * dW1; b1 -= lr * db1
-
-    if epoch % 1000 == 0:
-        print(f'Epoch {epoch}: Loss={loss:.6f}')
-
-print('Predictions:', np.round(a2.T, 3))
-plt.plot(losses); plt.title('Loss Curve')
+# Boxplots after outlier treatment
+fig, axes = plt.subplots(1, len(num_cols), figsize=(4*len(num_cols), 4))
+for ax, col in zip(axes, num_cols):
+    sns.boxplot(y=df[col], ax=ax)
+    ax.set_title(col)
+plt.tight_layout()
 plt.show()
 
+# Final cleaned dataset
+print(df.describe())
+df.to_csv("penguins_cleaned.csv", index=False)
+print("\nCleaned dataset saved as penguins_cleaned.csv")
 
 
-Program 5: CNN Model for Image Classification
-=============================================
+
+Program 2: Conduct exploratory data analysis and identify significant patterns using statistical and visualization techniques
+=============================================================================================================================
 
 Aim
 ---
-To train a Convolutional Neural Network (CNN) model for image classification on the CIFAR-10 dataset and evaluate its performance in terms of accuracy and loss.
+To perform exploratory data analysis on the Mall Customers dataset and identify significant patterns using statistics and visualizations.
+
+Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
 
 Procedure
 ---------
-1. Import TensorFlow/Keras and load CIFAR-10 dataset.
-2. Normalize pixel values to range [0, 1].
-3. Define CNN architecture: Conv2D -> MaxPool -> Conv2D -> MaxPool -> Dense layers.
-4. Compile model with Adam optimizer and sparse categorical crossentropy loss.
-5. Train model for 10 epochs with validation split.
-6. Evaluate model on test set and plot training/validation accuracy.
-7. Visualize sample predictions with true and predicted labels.
+1. Import pandas, numpy, matplotlib and seaborn.
+2. Load the Mall_Customers.csv dataset.
+3. Check shape, info, missing values and duplicates.
+4. Generate statistical summary using describe().
+5. Plot distributions of Age, Annual Income and Spending Score.
+6. Compare Gender using countplot and boxplot.
+7. Compute correlation matrix and plot a heatmap.
+8. Plot a pairplot to study relationships between numeric features.
+9. Plot Income vs Spending Score scatter plot.
+10. Print significant patterns such as group-wise averages and correlations.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'tensorflow': 'tensorflow', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
-import tensorflow as tf
-from tensorflow.keras import layers, models
-import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
-
-# Load CIFAR-10
-(X_train, y_train), (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
-X_train, X_test = X_train/255.0, X_test/255.0
-classes = ['airplane','auto','bird','cat','deer','dog','frog','horse','ship','truck']
-
-# Build CNN
-model = models.Sequential([
-    layers.Conv2D(32, (3,3), activation='relu', input_shape=(32,32,3)),
-    layers.MaxPooling2D(2,2),
-    layers.Conv2D(64, (3,3), activation='relu'),
-    layers.MaxPooling2D(2,2),
-    layers.Conv2D(64, (3,3), activation='relu'),
-    layers.Flatten(),
-    layers.Dense(64, activation='relu'),
-    layers.Dense(10, activation='softmax')
-])
-
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-model.summary()
-
-history = model.fit(X_train, y_train, epochs=10, validation_split=0.1, batch_size=64)
-
-test_loss, test_acc = model.evaluate(X_test, y_test)
-print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc*100:.2f}%')
-
-plt.figure(figsize=(12,4))
-plt.subplot(1,2,1); plt.plot(history.history['accuracy'], label='Train')
-plt.plot(history.history['val_accuracy'], label='Val'); plt.title('Accuracy'); plt.legend()
-plt.subplot(1,2,2); plt.plot(history.history['loss'], label='Train')
-plt.plot(history.history['val_loss'], label='Val'); plt.title('Loss'); plt.legend()
-plt.show()
-
-
-
-Program 6: Overfitting and Underfitting with Regularization
-===========================================================
-
-Aim
----
-To analyze overfitting and underfitting in deep learning models and apply regularization techniques (L1/L2, Dropout, Early Stopping) to achieve better generalization.
-
-Procedure
----------
-1. Load dataset and create three models: underfitting (too simple), overfitting (no regularization), regularized.
-2. Underfitting model: Single dense layer with few neurons.
-3. Overfitting model: Deep network trained too long without regularization.
-4. Regularized model: Add Dropout (0.5), L2 weight decay, and Early Stopping.
-5. Train all three models and plot training vs validation accuracy curves.
-6. Compare test accuracies to demonstrate effectiveness of regularization.
-7. Visualize the gap between train/val loss for each model.
-
-Code
-----
-# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
-import importlib, subprocess, sys
-
-required = {'tensorflow': 'tensorflow', 'matplotlib': 'matplotlib', 'numpy': 'numpy'}
-for import_name, pip_name in required.items():
-    try:
-        importlib.import_module(import_name)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
-
-import tensorflow as tf
-from tensorflow.keras import layers, models, regularizers, callbacks
 import matplotlib.pyplot as plt
-import numpy as np
+import seaborn as sns
 
-(X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
-X_train = X_train.reshape(-1, 784)/255.0
-X_test  = X_test.reshape(-1, 784)/255.0
-# Use only 2000 samples to exaggerate overfitting
-X_small, y_small = X_train[:2000], y_train[:2000]
+sns.set_style("whitegrid")
 
-def make_model(kind='overfit'):
-    m = models.Sequential()
-    if kind == 'underfit':
-        m.add(layers.Dense(4, activation='relu', input_shape=(784,)))
-    elif kind == 'overfit':
-        for _ in range(5): m.add(layers.Dense(512, activation='relu'))
-    else:  # regularized
-        for _ in range(5):
-            m.add(layers.Dense(512, activation='relu',
-                  kernel_regularizer=regularizers.l2(0.001)))
-            m.add(layers.Dropout(0.5))
-    m.add(layers.Dense(10, activation='softmax'))
-    m.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    return m
+df = pd.read_csv("Mall_Customers.csv")
+display(df.head())
 
-histories = {}
-early_stop = callbacks.EarlyStopping(patience=5, restore_best_weights=True)
-for kind in ['underfit', 'overfit', 'regularized']:
-    cb = [early_stop] if kind == 'regularized' else []
-    h = make_model(kind).fit(X_small, y_small, epochs=50,
-                             validation_split=0.2, verbose=0, callbacks=cb)
-    histories[kind] = h.history
-    train_acc = h.history["accuracy"][-1]
-    val_acc = max(h.history["val_accuracy"])
-    print(f'{kind}: train_acc={train_acc:.4f}, val_acc={val_acc:.4f}, gap={train_acc - val_acc:.4f}')
+print("Shape:", df.shape)
+print(df.info())
+print("\nMissing values:\n", df.isnull().sum())
+print("\nDuplicate rows:", df.duplicated().sum())
 
-# Plot training vs validation accuracy for each model
+# Statistical summary
+display(df.describe())
+
+# Distribution of numeric features
 fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-for ax, kind in zip(axes, ['underfit', 'overfit', 'regularized']):
-    ax.plot(histories[kind]['accuracy'], label='Train')
-    ax.plot(histories[kind]['val_accuracy'], label='Val')
-    ax.set_title(kind); ax.set_xlabel('Epoch'); ax.set_ylabel('Accuracy'); ax.legend()
+sns.histplot(df["Age"], kde=True, ax=axes[0])
+axes[0].set_title("Age Distribution")
+sns.histplot(df["Annual Income (k$)"], kde=True, ax=axes[1])
+axes[1].set_title("Annual Income Distribution")
+sns.histplot(df["Spending Score (1-100)"], kde=True, ax=axes[2])
+axes[2].set_title("Spending Score Distribution")
 plt.tight_layout()
 plt.show()
+
+# Gender-wise comparison
+plt.figure(figsize=(6, 4))
+sns.countplot(x="Gender", data=df)
+plt.title("Customer Count by Gender")
+plt.show()
+
+plt.figure(figsize=(6, 4))
+sns.boxplot(x="Gender", y="Spending Score (1-100)", data=df)
+plt.title("Spending Score by Gender")
+plt.show()
+
+# Correlation among numeric features
+num_df = df.drop("CustomerID", axis=1).select_dtypes(include=np.number)
+corr = num_df.corr()
+plt.figure(figsize=(6, 5))
+sns.heatmap(corr, annot=True, cmap="coolwarm")
+plt.title("Correlation Heatmap")
+plt.show()
+print(corr)
+
+# Pairwise relationships between numeric features
+sns.pairplot(df, vars=["Age", "Annual Income (k$)", "Spending Score (1-100)"], hue="Gender")
+plt.show()
+
+# Income vs Spending Score scatter plot
+plt.figure(figsize=(7, 5))
+sns.scatterplot(x="Annual Income (k$)", y="Spending Score (1-100)", hue="Gender", data=df)
+plt.title("Annual Income vs Spending Score")
+plt.show()
+
+# Significant patterns observed
+print("Average spending score by gender:")
+print(df.groupby("Gender")["Spending Score (1-100)"].mean())
+
+print("\nCorrelation between Annual Income and Spending Score:",
+      round(corr.loc["Annual Income (k$)", "Spending Score (1-100)"], 3))
+
+
+
+Program 3: Develop a regression model and interpret the prediction results
+==========================================================================
+
+Aim
+---
+To develop a Linear Regression model on the Penguins dataset to predict body mass and interpret the results using evaluation metrics and plots.
+
+Dataset: penguins_size.csv (place it in the same folder as the notebook)
+
+Procedure
+---------
+1. Import pandas, numpy, matplotlib, seaborn and scikit-learn modules.
+2. Load the penguins_size.csv dataset.
+3. Drop missing values and invalid sex entries.
+4. Encode categorical columns using LabelEncoder.
+5. Split data into features (X) and target (y = body_mass_g).
+6. Split into training and testing sets (80:20).
+7. Train a Linear Regression model on the training data.
+8. Predict body mass on the test data.
+9. Evaluate using MAE, MSE, RMSE and R2 Score.
+10. Compare actual vs predicted values in a table and scatter plot.
+11. Plot residuals and feature importance to interpret the model.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'sklearn': 'scikit-learn'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+sns.set_style("whitegrid")
+
+# Load dataset
+df = pd.read_csv("penguins_size.csv")
+display(df.head())
+
+print("Shape:", df.shape)
+print("\nMissing values:\n", df.isnull().sum())
+
+# Remove missing values
+df = df.dropna()
+df = df[df['sex'] != '.']
+print("Shape after cleaning:", df.shape)
+
+# Encode categorical columns
+encoder = LabelEncoder()
+cat_cols = df.select_dtypes(exclude=np.number).columns
+for col in cat_cols:
+    df[col] = encoder.fit_transform(df[col])
+display(df.head())
+
+# Features and target: predict body_mass_g
+X = df.drop("body_mass_g", axis=1)
+y = df["body_mass_g"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print("Training samples:", X_train.shape[0])
+print("Testing samples :", X_test.shape[0])
+
+# Train Linear Regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predict on test data
+y_pred = model.predict(X_test)
+
+# Evaluate model performance
+mae = mean_absolute_error(y_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
+rmse = np.sqrt(mse)
+r2 = r2_score(y_test, y_pred)
+
+print("Mean Absolute Error :", round(mae, 2))
+print("Mean Squared Error  :", round(mse, 2))
+print("Root Mean Squared Error :", round(rmse, 2))
+print("R2 Score :", round(r2, 3))
+
+# Compare actual vs predicted values
+results = pd.DataFrame({"Actual": y_test.values, "Predicted": np.round(y_pred, 2)})
+display(results.head(10))
+
+# Actual vs Predicted scatter plot
+plt.figure(figsize=(7, 6))
+plt.scatter(y_test, y_pred, color="royalblue")
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color="red", linewidth=2)
+plt.xlabel("Actual Body Mass (g)")
+plt.ylabel("Predicted Body Mass (g)")
+plt.title("Actual vs Predicted Body Mass")
+plt.show()
+
+# Residual plot
+residuals = y_test - y_pred
+plt.figure(figsize=(7, 6))
+sns.scatterplot(x=y_pred, y=residuals, color="green")
+plt.axhline(0, color="red", linestyle="--")
+plt.xlabel("Predicted Values")
+plt.ylabel("Residuals")
+plt.title("Residual Plot")
+plt.show()
+
+# Feature importance from regression coefficients
+importance = pd.DataFrame({"Feature": X.columns, "Coefficient": model.coef_})
+importance = importance.sort_values(by="Coefficient", key=abs, ascending=False)
+
+plt.figure(figsize=(7, 5))
+sns.barplot(x="Coefficient", y="Feature", data=importance)
+plt.title("Feature Importance (Regression Coefficients)")
+plt.show()
+
+
+
+Program 4: Apply classification or clustering techniques to solve a data driven problem and analyze the outcomes
+================================================================================================================
+
+Aim
+---
+To apply K-Means clustering on the Mall Customers dataset to segment customers based on income and spending score, and analyze the resulting clusters.
+
+Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
+
+Procedure
+---------
+1. Import pandas, numpy, matplotlib, seaborn and scikit-learn modules.
+2. Load the Mall_Customers.csv dataset.
+3. Check missing values and duplicates.
+4. Select Annual Income and Spending Score as clustering features.
+5. Scale the features using StandardScaler.
+6. Use the Elbow Method to find the optimal number of clusters.
+7. Apply K-Means clustering with K = 5.
+8. Visualize the clusters and centroids on a scatter plot.
+9. Analyze cluster-wise averages and customer counts per cluster.
+10. Evaluate clustering quality using the Silhouette Score.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'sklearn': 'scikit-learn'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
+
+sns.set_style("whitegrid")
+
+# Load dataset
+df = pd.read_csv("Mall_Customers.csv")
+display(df.head())
+
+print("Shape:", df.shape)
+print("\nMissing values:\n", df.isnull().sum())
+print("Duplicate rows:", df.duplicated().sum())
+
+display(df.describe())
+
+# Select features for clustering
+X = df[["Annual Income (k$)", "Spending Score (1-100)"]]
+display(X.head())
+
+# Scale features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Elbow method to find optimal number of clusters
+wcss = []
+for i in range(1, 11):
+    kmeans = KMeans(n_clusters=i, random_state=42, n_init=10)
+    kmeans.fit(X_scaled)
+    wcss.append(kmeans.inertia_)
+
+plt.figure(figsize=(8, 5))
+plt.plot(range(1, 11), wcss, marker="o")
+plt.xlabel("Number of Clusters (K)")
+plt.ylabel("WCSS")
+plt.title("Elbow Method")
+plt.show()
+
+# Apply K-Means with K = 5
+kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
+df["Cluster"] = kmeans.fit_predict(X_scaled)
+display(df.head())
+
+# Visualize the clusters
+centers = scaler.inverse_transform(kmeans.cluster_centers_)
+
+plt.figure(figsize=(9, 7))
+sns.scatterplot(data=df, x="Annual Income (k$)", y="Spending Score (1-100)", hue="Cluster", palette="Set1", s=100)
+plt.scatter(centers[:, 0], centers[:, 1], color="black", marker="X", s=200, label="Centroids")
+plt.title("Customer Segments (K-Means Clustering)")
+plt.legend()
+plt.show()
+
+# Cluster-wise summary
+cluster_summary = df.groupby("Cluster")[["Age", "Annual Income (k$)", "Spending Score (1-100)"]].mean()
+print(cluster_summary)
+
+# Number of customers per cluster
+cluster_counts = df["Cluster"].value_counts().sort_index()
+plt.figure(figsize=(7, 5))
+cluster_counts.plot(kind="bar")
+plt.title("Number of Customers in Each Cluster")
+plt.xlabel("Cluster")
+plt.ylabel("Count")
+plt.xticks(rotation=0)
+plt.show()
+
+# Evaluate clustering using Silhouette Score
+score = silhouette_score(X_scaled, df["Cluster"])
+print("Silhouette Score:", round(score, 3))
+
+
+
+Program 5: Create visualization using matplotlib and seaborn to communicate dataset insights
+============================================================================================
+
+Aim
+---
+To use Matplotlib and Seaborn to create a variety of visualizations on the Penguins dataset that communicate key insights about species proportions, distributions and relationships.
+
+Dataset: penguins_size.csv (place it in the same folder as the notebook)
+
+Procedure
+---------
+1. Import pandas, numpy, matplotlib and seaborn.
+2. Load and clean the penguins_size.csv dataset.
+3. Plot a pie chart to show species proportions.
+4. Plot a grouped bar chart of species distribution across islands.
+5. Plot a boxplot of body mass by species.
+6. Plot a violin plot of flipper length by species.
+7. Plot a scatter plot of flipper length vs body mass by species and sex.
+8. Plot a pairplot (correlogram) of numeric features by species.
+9. Plot a correlation heatmap of numeric features.
+10. Plot a grouped bar chart of average measurements per species.
+11. Rank numeric features by how well they separate species using the one-way ANOVA F-statistic and plot it.
+12. Print a final analysis summary (proportions, islands, top species per measurement, correlations).
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'scipy': 'scipy'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_style("whitegrid")
+
+# Load and clean dataset
+df = pd.read_csv("penguins_size.csv")
+print("Raw dataset shape (rows, columns):", df.shape)
+print("Raw dataset size (total values):", df.size)
+
+df['sex'] = df['sex'].replace('.', np.nan)
+df = df.dropna()
+
+print("\nCleaned dataset shape (rows, columns):", df.shape)
+print("Cleaned dataset size (total values):", df.size)
+
+display(df.head())
+
+# Proportion of penguin species (Pie Chart)
+species_counts = df["species"].value_counts()
+
+plt.figure(figsize=(6, 6))
+plt.pie(species_counts, labels=species_counts.index, autopct="%1.1f%%", startangle=90,
+        colors=sns.color_palette("Set2"))
+plt.title("Proportion of Penguin Species")
+plt.show()
+
+# Species count across islands (Grouped Bar Chart)
+plt.figure(figsize=(8, 5))
+sns.countplot(x="island", hue="species", data=df, palette="Set2")
+plt.title("Species Distribution Across Islands")
+plt.xlabel("Island")
+plt.ylabel("Count")
+plt.show()
+
+# Body mass distribution by species (Box Plot)
+plt.figure(figsize=(8, 5))
+sns.boxplot(x="species", y="body_mass_g", hue="species", data=df, palette="Set3", legend=False)
+plt.title("Body Mass Distribution by Species")
+plt.xlabel("Species")
+plt.ylabel("Body Mass (g)")
+plt.show()
+
+# Flipper length distribution by species (Violin Plot)
+plt.figure(figsize=(8, 5))
+sns.violinplot(x="species", y="flipper_length_mm", hue="species", data=df, palette="Set1", legend=False)
+plt.title("Flipper Length Distribution by Species")
+plt.xlabel("Species")
+plt.ylabel("Flipper Length (mm)")
+plt.show()
+
+# Relationship between flipper length and body mass (Scatter Plot)
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x="flipper_length_mm", y="body_mass_g", hue="species", style="sex", data=df, s=80)
+plt.title("Flipper Length vs Body Mass")
+plt.xlabel("Flipper Length (mm)")
+plt.ylabel("Body Mass (g)")
+plt.show()
+
+# Correlogram of numeric features
+sns.pairplot(df, hue="species", vars=["culmen_length_mm", "culmen_depth_mm", "flipper_length_mm", "body_mass_g"])
+plt.show()
+
+# Correlation heatmap
+num_df = df.select_dtypes(include=np.number)
+plt.figure(figsize=(6, 5))
+sns.heatmap(num_df.corr(), annot=True, cmap="coolwarm")
+plt.title("Correlation Heatmap of Numeric Features")
+plt.show()
+
+# Feature importance: which measurement best separates the species?
+# Uses a one-way ANOVA F-statistic per numeric feature (grouped by species).
+# A larger F-statistic means that feature's average differs more sharply
+# across species relative to the spread within each species - i.e. it is a
+# stronger "signal" for telling species apart just from that one measurement.
+from scipy.stats import f_oneway
+
+numeric_features = ["culmen_length_mm", "culmen_depth_mm", "flipper_length_mm", "body_mass_g"]
+
+importance_scores = {}
+for feature in numeric_features:
+    groups = [group[feature].values for _, group in df.groupby("species")]
+    f_stat, p_value = f_oneway(*groups)
+    importance_scores[feature] = f_stat
+
+importance = pd.Series(importance_scores).sort_values(ascending=False)
+print("Feature importance for separating species (ANOVA F-statistic):")
+print(importance)
+
+plt.figure(figsize=(8, 5))
+importance.plot(kind="bar", color=sns.color_palette("viridis", len(importance)))
+plt.title("Feature Importance for Species Separation (ANOVA F-statistic)")
+plt.ylabel("F-statistic (higher = stronger separator)")
+plt.xticks(rotation=20)
+plt.tight_layout()
+plt.show()
+
+print(f"\nMost important feature: '{importance.index[0]}' (F = {importance.iloc[0]:.1f}) "
+      f"is the strongest single separator of species in this dataset.")
+
+# Average measurements per species (Grouped Bar Chart)
+avg_measures = df.groupby("species")[["culmen_length_mm", "culmen_depth_mm", "flipper_length_mm"]].mean()
+avg_measures.plot(kind="bar", figsize=(8, 5))
+plt.title("Average Measurements by Species")
+plt.ylabel("Measurement (mm)")
+plt.xticks(rotation=0)
+plt.show()
+
+# ============================================================
+# Final Analysis Summary (computed directly from the data above,
+# not hardcoded, so it stays correct if the data changes)
+# ============================================================
+print("=" * 60)
+print("FINAL ANALYSIS SUMMARY")
+print("=" * 60)
+
+# 1. Species proportions
+species_pct = (df["species"].value_counts(normalize=True) * 100).round(1)
+print("\n1. Species proportions:")
+for sp, pct in species_pct.items():
+    print(f"   - {sp}: {pct}%")
+
+# 2. Species-island relationship
+print("\n2. Islands occupied by each species:")
+for sp in sorted(df["species"].unique()):
+    islands = sorted(df[df["species"] == sp]["island"].unique())
+    print(f"   - {sp}: {', '.join(islands)}")
+
+# 3. Species with the highest average value, per measurement
+avg_by_species = df.groupby("species")[numeric_features].mean()
+print("\n3. Species with the highest average value per measurement:")
+for feature in numeric_features:
+    top_species = avg_by_species[feature].idxmax()
+    print(f"   - {feature}: {top_species} ({avg_by_species[feature].max():.1f})")
+
+# 4. Strongest / weakest pairwise correlations among numeric features
+corr_matrix = df[numeric_features].corr()
+pairs = []
+for i in range(len(numeric_features)):
+    for j in range(i + 1, len(numeric_features)):
+        f1, f2 = numeric_features[i], numeric_features[j]
+        pairs.append((f1, f2, corr_matrix.loc[f1, f2]))
+pairs_df = pd.DataFrame(pairs, columns=["Feature 1", "Feature 2", "Correlation"])
+strongest = pairs_df.loc[pairs_df["Correlation"].abs().idxmax()]
+weakest = pairs_df.loc[pairs_df["Correlation"].abs().idxmin()]
+
+print("\n4. Correlation insights:")
+print(f"   - Strongest relationship: {strongest['Feature 1']} & {strongest['Feature 2']} "
+      f"(r = {strongest['Correlation']:.2f})")
+print(f"   - Weakest relationship: {weakest['Feature 1']} & {weakest['Feature 2']} "
+      f"(r = {weakest['Correlation']:.2f})")
+
+# 5. Best single feature for telling species apart (from the importance cell above)
+print(f"\n5. Best single feature for distinguishing species: "
+      f"'{importance.index[0]}' (ANOVA F = {importance.iloc[0]:.1f})")
+
+print("\n" + "=" * 60)
+print("CONCLUSION:")
+print("Species is the dominant factor differentiating this dataset. Gentoo")
+print("is the largest species by body mass and flipper length, yet Adelie")
+print("and Chinstrap have deeper (thicker) bills than Gentoo despite being")
+print("smaller overall - showing that overall body size and beak shape do")
+print("not scale together across species.")
+print("=" * 60)
+
+
+
+Program 6: Develop an interactive visualization/dashboard using Plotly or Tableau
+=================================================================================
+
+Aim
+---
+To build an interactive dashboard on the Mall Customers dataset using Plotly, combining multiple linked charts to highlight customer trends.
+
+Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
+
+Procedure
+---------
+1. Import pandas, plotly.express, plotly.graph_objects and make_subplots.
+2. Load the Mall_Customers.csv dataset.
+3. Create an interactive scatter plot of Income vs Spending Score.
+4. Create an interactive histogram of Age distribution by Gender.
+5. Create an interactive box plot of Spending Score by Gender.
+6. Bucket customers into age groups and plot average spending per group.
+7. Combine all views into a single 2x2 interactive dashboard using subplots.
+8. Export the dashboard as a standalone HTML file.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'pandas': 'pandas', 'plotly': 'plotly', 'nbformat': 'nbformat'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+# Load dataset
+df = pd.read_csv("Mall_Customers.csv")
+display(df.head())
+
+# Interactive scatter plot: Income vs Spending Score
+fig1 = px.scatter(df, x="Annual Income (k$)", y="Spending Score (1-100)",
+                   color="Gender", hover_data=["Age", "CustomerID"],
+                   title="Annual Income vs Spending Score")
+fig1.show()
+
+# Interactive histogram: Age distribution
+fig2 = px.histogram(df, x="Age", color="Gender", nbins=20,
+                     title="Age Distribution by Gender")
+fig2.show()
+
+# Interactive box plot: Spending Score by Gender
+fig3 = px.box(df, x="Gender", y="Spending Score (1-100)", color="Gender",
+              title="Spending Score by Gender")
+fig3.show()
+
+# Interactive bar chart: average spending score by age group
+df["Age Group"] = pd.cut(df["Age"], bins=[17, 25, 35, 45, 55, 70],
+                          labels=["18-25", "26-35", "36-45", "46-55", "56-70"])
+age_group_avg = df.groupby("Age Group", observed=True)["Spending Score (1-100)"].mean().reset_index()
+
+fig4 = px.bar(age_group_avg, x="Age Group", y="Spending Score (1-100)",
+              title="Average Spending Score by Age Group", color="Age Group")
+fig4.show()
+
+# Combined interactive dashboard (2x2 grid of linked views)
+dashboard = make_subplots(rows=2, cols=2, subplot_titles=(
+    "Income vs Spending Score", "Age Distribution",
+    "Spending Score by Gender", "Avg Spending by Age Group"
+))
+
+for gender in df["Gender"].unique():
+    d = df[df["Gender"] == gender]
+    dashboard.add_trace(go.Scatter(x=d["Annual Income (k$)"], y=d["Spending Score (1-100)"],
+                                    mode="markers", name=f"{gender} (Income vs Spending)"), row=1, col=1)
+    dashboard.add_trace(go.Histogram(x=d["Age"], name=f"{gender} (Age)"), row=1, col=2)
+    dashboard.add_trace(go.Box(y=d["Spending Score (1-100)"], name=gender), row=2, col=1)
+
+dashboard.add_trace(go.Bar(x=age_group_avg["Age Group"].astype(str),
+                            y=age_group_avg["Spending Score (1-100)"],
+                            name="Avg Spending Score"), row=2, col=2)
+
+dashboard.update_layout(height=800, width=950, title_text="Mall Customer Dashboard", showlegend=False)
+dashboard.show()
+
+# Save the interactive dashboard as a standalone HTML file
+dashboard.write_html("Mall_Customer_Dashboard.html")
+print("Dashboard saved as Mall_Customer_Dashboard.html")
+
+
+
+Program 6B: Develop an interactive visualization/dashboard using Plotly or Tableau (alternate version)
+======================================================================================================
+
+Aim
+---
+To develop an interactive dashboard using Plotly and Dash on the Mall Customers dataset that segments customers using K-Means clustering and lets the user filter all charts by gender.
+
+Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
+
+Procedure
+---------
+1. Import pandas, numpy, plotly.express, plotly.graph_objects, scikit-learn and dash modules.
+2. Load the Mall_Customers.csv dataset and check missing values.
+3. Apply K-Means clustering (K=5) on Income and Spending Score.
+4. Define a reusable function to build scatter, bar, box and pie charts for a given dataframe.
+5. Preview the standalone scatter, bar, box and pie charts for the full dataset.
+6. Build the Dash app layout with a title and a gender-filter dropdown.
+7. Add a callback that rebuilds all four charts based on the selected gender.
+8. Run the Dash app inline inside the notebook using jupyter_mode='inline'.
+9. Interact with the dropdown filter and verify all charts update correctly.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'pandas': 'pandas', 'numpy': 'numpy', 'plotly': 'plotly', 'sklearn': 'scikit-learn', 'dash': 'dash', 'nbformat': 'nbformat'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from dash import Dash, dcc, html, Input, Output
+
+# Load dataset
+df = pd.read_csv("Mall_Customers.csv")
+print("Shape:", df.shape)
+print("\nMissing values:\n", df.isnull().sum())
+display(df.head())
+
+# Apply K-Means clustering (K=5) on Income and Spending Score
+X = df[["Annual Income (k$)", "Spending Score (1-100)"]]
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
+df["Cluster"] = kmeans.fit_predict(X_scaled).astype(str)
+
+print("\nCluster distribution:")
+print(df["Cluster"].value_counts().sort_index())
+
+# Build the four dashboard charts for a given (possibly filtered) dataframe
+def build_charts(data):
+    scatter = px.scatter(
+        data,
+        x="Annual Income (k$)",
+        y="Spending Score (1-100)",
+        color="Cluster",
+        symbol="Gender",
+        hover_data=["Age"],
+        title="Annual Income vs Spending Score",
+        color_discrete_sequence=px.colors.qualitative.Set1
+    )
+    scatter.update_traces(marker=dict(size=9, opacity=0.8))
+
+    counts = data["Cluster"].value_counts().reset_index()
+    counts.columns = ["Cluster", "Count"]
+    bar = px.bar(
+        counts.sort_values("Cluster"),
+        x="Cluster",
+        y="Count",
+        color="Cluster",
+        title="Number of Customers per Cluster",
+        color_discrete_sequence=px.colors.qualitative.Set1,
+        text="Count"
+    )
+    bar.update_traces(textposition="outside")
+
+    box = px.box(
+        data,
+        x="Gender",
+        y="Spending Score (1-100)",
+        color="Gender",
+        title="Spending Score Distribution by Gender",
+        points="all"
+    )
+
+    g_counts = data["Gender"].value_counts().reset_index()
+    g_counts.columns = ["Gender", "Count"]
+    pie = px.pie(
+        g_counts,
+        names="Gender",
+        values="Count",
+        title="Gender Distribution of Customers",
+        color_discrete_sequence=px.colors.qualitative.Pastel
+    )
+
+    return scatter, bar, box, pie
+
+# Annual Income vs Spending Score by Cluster (standalone preview)
+fig_scatter, fig_bar, fig_box, fig_pie = build_charts(df)
+
+fig_scatter.show()
+
+# Number of customers per cluster
+fig_bar.show()
+
+# Spending Score distribution by Gender
+fig_box.show()
+
+# Gender distribution of customers
+fig_pie.show()
+
+# Dash Interactive Dashboard
+app = Dash(__name__)
+
+app.layout = html.Div([
+    html.H1("Mall Customer Dashboard",
+            style={"textAlign": "center", "fontFamily": "Arial", "color": "#2c3e50"}),
+
+    html.Div([
+        html.Label("Filter by Gender:", style={"fontWeight": "bold"}),
+        dcc.Dropdown(
+            id="gender-filter",
+            options=[{"label": "All", "value": "All"}] +
+                    [{"label": g, "value": g} for g in df["Gender"].unique()],
+            value="All",
+            clearable=False,
+            style={"width": "250px"}
+        )
+    ], style={"margin": "20px"}),
+
+    html.Div([
+        dcc.Graph(id="scatter-plot", style={"display": "inline-block", "width": "49%"}),
+        dcc.Graph(id="bar-chart",   style={"display": "inline-block", "width": "49%"})
+    ]),
+
+    html.Div([
+        dcc.Graph(id="box-plot", style={"display": "inline-block", "width": "49%"}),
+        dcc.Graph(id="pie-chart", style={"display": "inline-block", "width": "49%"})
+    ])
+], style={"fontFamily": "Arial"})
+
+
+@app.callback(
+    Output("scatter-plot", "figure"),
+    Output("bar-chart",   "figure"),
+    Output("box-plot",    "figure"),
+    Output("pie-chart",   "figure"),
+    Input("gender-filter", "value")
+)
+def update_dashboard(selected_gender):
+    filtered = df if selected_gender == "All" else df[df["Gender"] == selected_gender]
+    return build_charts(filtered)
+
+# Run the Dash app inline inside the notebook (no separate browser/terminal needed).
+# jupyter_mode="inline" starts the server in a background thread and renders it
+# as an embedded frame in the output, so this cell does not block/hang like a
+# plain app.run(debug=True) would.
+app.run(jupyter_mode="inline", port=8060, debug=False)
 
 -->
 </body></html>
