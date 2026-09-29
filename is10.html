@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 1 (short): Introduction to NLP Libraries (NLTK, SpaCy)
+==============================================================
+
+Aim
+---
+To explore the NLTK library by performing tokenization, POS tagging, and named entity recognition.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+for pkg in ['punkt', 'punkt_tab', 'averaged_perceptron_tagger', 'averaged_perceptron_tagger_eng', 'maxent_ne_chunker', 'maxent_ne_chunker_tab', 'words']:
+    nltk.download(pkg)
+
+import nltk
+
+text = "Apple is looking at buying a U.K. startup for $1 billion."
+tokens = nltk.word_tokenize(text)
+tags = nltk.pos_tag(tokens)
+
+print("Tokens:", tokens)
+print("POS Tags:", tags)
+print("Named Entities:")
+print(nltk.ne_chunk(tags))
+
+-->
+</body></html>

@@ -2,129 +2,84 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 3: Develop a regression model and interpret the prediction results
-==========================================================================
+Program 3: Implementing Edit Distance and Weighted Edit Distance
+================================================================
 
 Aim
 ---
-To develop a Linear Regression model on the Penguins dataset to predict body mass and interpret the results using evaluation metrics and plots.
-
-Dataset: penguins_size.csv (place it in the same folder as the notebook)
+To compute the Edit Distance and Weighted Edit Distance between two given strings using dynamic programming.
 
 Procedure
 ---------
-1. Import pandas, numpy, matplotlib, seaborn and scikit-learn modules.
-2. Load the penguins_size.csv dataset.
-3. Drop missing values and invalid sex entries.
-4. Encode categorical columns using LabelEncoder.
-5. Split data into features (X) and target (y = body_mass_g).
-6. Split into training and testing sets (80:20).
-7. Train a Linear Regression model on the training data.
-8. Predict body mass on the test data.
-9. Evaluate using MAE, MSE, RMSE and R2 Score.
-10. Compare actual vs predicted values in a table and scatter plot.
-11. Plot residuals and feature importance to interpret the model.
+1. Take two input strings/words.
+2. Create a DP table of size (m+1) x (n+1).
+3. Initialize first row and column with index values (base costs).
+4. Fill the table: if characters match, copy diagonal value.
+5. If characters differ, take min of insert, delete, substitute
+6. operations (+1 each for simple edit distance).
+7. For weighted edit distance, use custom costs for insertion,
+8. deletion, and substitution instead of uniform cost 1.
+9. Return the value in the last cell as the edit distance.
+10. Display both simple and weighted edit distance results.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'sklearn': 'scikit-learn'}
+required = {}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+def edit_distance(s1, s2):
+    """Levenshtein (unweighted) edit distance using dynamic programming."""
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
 
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+    for i in range(m + 1):
+        dp[i][0] = i
+    for j in range(n + 1):
+        dp[0][j] = j
 
-sns.set_style("whitegrid")
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s1[i - 1] == s2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = 1 + min(dp[i - 1][j],      # deletion
+                                    dp[i][j - 1],      # insertion
+                                    dp[i - 1][j - 1])  # substitution
+    return dp[m][n]
 
-# Load dataset
-df = pd.read_csv("penguins_size.csv")
-display(df.head())
 
-print("Shape:", df.shape)
-print("\nMissing values:\n", df.isnull().sum())
+def weighted_edit_distance(s1, s2, ins_cost=1, del_cost=1, sub_cost=2):
+    """Edit distance with custom insertion/deletion/substitution costs."""
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
 
-# Remove missing values
-df = df.dropna()
-df = df[df['sex'] != '.']
-print("Shape after cleaning:", df.shape)
+    for i in range(m + 1):
+        dp[i][0] = i * del_cost
+    for j in range(n + 1):
+        dp[0][j] = j * ins_cost
 
-# Encode categorical columns
-encoder = LabelEncoder()
-cat_cols = df.select_dtypes(exclude=np.number).columns
-for col in cat_cols:
-    df[col] = encoder.fit_transform(df[col])
-display(df.head())
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s1[i - 1] == s2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = min(dp[i - 1][j] + del_cost,
+                                dp[i][j - 1] + ins_cost,
+                                dp[i - 1][j - 1] + sub_cost)
+    return dp[m][n]
 
-# Features and target: predict body_mass_g
-X = df.drop("body_mass_g", axis=1)
-y = df["body_mass_g"]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-print("Training samples:", X_train.shape[0])
-print("Testing samples :", X_test.shape[0])
-
-# Train Linear Regression model
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-# Predict on test data
-y_pred = model.predict(X_test)
-
-# Evaluate model performance
-mae = mean_absolute_error(y_test, y_pred)
-mse = mean_squared_error(y_test, y_pred)
-rmse = np.sqrt(mse)
-r2 = r2_score(y_test, y_pred)
-
-print("Mean Absolute Error :", round(mae, 2))
-print("Mean Squared Error  :", round(mse, 2))
-print("Root Mean Squared Error :", round(rmse, 2))
-print("R2 Score :", round(r2, 3))
-
-# Compare actual vs predicted values
-results = pd.DataFrame({"Actual": y_test.values, "Predicted": np.round(y_pred, 2)})
-display(results.head(10))
-
-# Actual vs Predicted scatter plot
-plt.figure(figsize=(7, 6))
-plt.scatter(y_test, y_pred, color="royalblue")
-plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color="red", linewidth=2)
-plt.xlabel("Actual Body Mass (g)")
-plt.ylabel("Predicted Body Mass (g)")
-plt.title("Actual vs Predicted Body Mass")
-plt.show()
-
-# Residual plot
-residuals = y_test - y_pred
-plt.figure(figsize=(7, 6))
-sns.scatterplot(x=y_pred, y=residuals, color="green")
-plt.axhline(0, color="red", linestyle="--")
-plt.xlabel("Predicted Values")
-plt.ylabel("Residuals")
-plt.title("Residual Plot")
-plt.show()
-
-# Feature importance from regression coefficients
-importance = pd.DataFrame({"Feature": X.columns, "Coefficient": model.coef_})
-importance = importance.sort_values(by="Coefficient", key=abs, ascending=False)
-
-plt.figure(figsize=(7, 5))
-sns.barplot(x="Coefficient", y="Feature", data=importance)
-plt.title("Feature Importance (Regression Coefficients)")
-plt.show()
+word1, word2 = "intention", "execution"
+print(f"Edit Distance between '{word1}' and '{word2}': {edit_distance(word1, word2)}")
+print(f"Weighted Edit Distance between '{word1}' and '{word2}': "
+      f"{weighted_edit_distance(word1, word2)}")
 
 -->
 </body></html>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 1 (short): Introduction to NLP Libraries (NLTK, SpaCy)
+==============================================================
+
+Aim
+---
+To explore the NLTK library by performing tokenization, POS tagging, and named entity recognition.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+for pkg in ['punkt', 'punkt_tab', 'averaged_perceptron_tagger', 'averaged_perceptron_tagger_eng', 'maxent_ne_chunker', 'maxent_ne_chunker_tab', 'words']:
+    nltk.download(pkg)
+
+import nltk
+
+text = "Apple is looking at buying a U.K. startup for $1 billion."
+tokens = nltk.word_tokenize(text)
+tags = nltk.pos_tag(tokens)
+
+print("Tokens:", tokens)
+print("POS Tags:", tags)
+print("Named Entities:")
+print(nltk.ne_chunk(tags))
+
+
+
+Program 2 (short): Implementing Tokenization and Text Normalization
+===================================================================
+
+Aim
+---
+To tokenize a given text and normalize it using lowercasing, stopword removal, stemming, and lemmatization.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+for pkg in ['punkt', 'punkt_tab', 'stopwords', 'wordnet']:
+    nltk.download(pkg)
+
+import string
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+text = "NLP is amazing! It's transforming how machines understand human languages, isn't it?"
+words = word_tokenize(text)
+lower = [w.lower() for w in words if w not in string.punctuation]
+stop_words = set(stopwords.words('english'))
+no_stop = [w for w in lower if w not in stop_words]
+
+ps, lemmatizer = PorterStemmer(), WordNetLemmatizer()
+print("Sentences:", sent_tokenize(text))
+print("Words:", words)
+print("Without stopwords:", no_stop)
+print("Stemmed:", [ps.stem(w) for w in no_stop])
+print("Lemmatized:", [lemmatizer.lemmatize(w) for w in no_stop])
+
+
+
+Program 3 (short): Implementing Edit Distance and Weighted Edit Distance
+========================================================================
+
+Aim
+---
+To compute the Edit Distance and Weighted Edit Distance between two given strings using dynamic programming.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+
+w1, w2 = "intention", "execution"
+print(f"Edit Distance between '{w1}' and '{w2}': {nltk.edit_distance(w1, w2)}")
+print(f"Weighted Edit Distance (substitution_cost=2): "
+      f"{nltk.edit_distance(w1, w2, substitution_cost=2)}")
+
+
+
+Program 4 (short): Noisy Channel Model for Spelling Correction
+==============================================================
+
+Aim
+---
+To implement a spelling correction system based on the Noisy Channel Model using edit distance and word frequency.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'spellchecker': 'pyspellchecker'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+from spellchecker import SpellChecker
+
+spell = SpellChecker()
+for w in ["speling", "korrect", "recieve", "wrld"]:
+    print(f"'{w}' -> '{spell.correction(w)}'")
+
+
+
+Program 5 (short): N-Gram Model Implementation and Evaluation Insights
+======================================================================
+
+Aim
+---
+To implement a bigram language model with add-1 smoothing and evaluate it using perplexity and text generation.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+from nltk.corpus import brown
+from nltk.lm import Laplace
+from nltk.lm.preprocessing import padded_everygram_pipeline, pad_both_ends
+from nltk.util import bigrams
+
+sentences = brown.sents(categories='news')
+split = int(0.8 * len(sentences))
+train_sents, test_sents = sentences[:split], sentences[split:]
+
+train_data, vocab = padded_everygram_pipeline(2, train_sents)
+model = Laplace(2)
+model.fit(train_data, vocab)
+print("Vocabulary size:", len(model.vocab))
+
+test_sentence = test_sents[0]
+test_ngrams = list(bigrams(pad_both_ends(test_sentence, n=2)))
+print("Test sentence:", ' '.join(test_sentence))
+print("Perplexity:", model.perplexity(test_ngrams))
+print("Generated text:", model.generate(15, text_seed=['the'], random_seed=42))
+
+
+
+Program 6 (short): POS Tagging using HMM and Viterbi Algorithm
+==============================================================
+
+Aim
+---
+To implement a Hidden Markov Model (HMM) based POS tagger and decode the most likely tag sequence using the Viterbi algorithm.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('treebank')
+
+from nltk.corpus import treebank
+from nltk.tag import hmm
+from nltk.probability import LidstoneProbDist
+
+tagged_sents = treebank.tagged_sents()
+split = int(0.9 * len(tagged_sents))
+train_sents, test_sents = tagged_sents[:split], tagged_sents[split:]
+
+estimator = lambda fd, bins: LidstoneProbDist(fd, 0.1, bins)
+tagger = hmm.HiddenMarkovModelTrainer().train_supervised(train_sents, estimator=estimator)
+
+test_sentence = [w for w, t in test_sents[0]]
+true_tags = [t for w, t in test_sents[0]]
+predicted = tagger.tag(test_sentence)
+
+print("Sentence:", ' '.join(test_sentence))
+print("Predicted tags:", predicted)
+correct = sum(1 for (w, pt), tt in zip(predicted, true_tags) if pt == tt)
+print(f"Accuracy: {correct}/{len(true_tags)} = {correct/len(true_tags)*100:.2f}%")
+
+-->
+</body></html>

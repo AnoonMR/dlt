@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 5 (short): N-Gram Model Implementation and Evaluation Insights
+======================================================================
+
+Aim
+---
+To implement a bigram language model with add-1 smoothing and evaluate it using perplexity and text generation.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+from nltk.corpus import brown
+from nltk.lm import Laplace
+from nltk.lm.preprocessing import padded_everygram_pipeline, pad_both_ends
+from nltk.util import bigrams
+
+sentences = brown.sents(categories='news')
+split = int(0.8 * len(sentences))
+train_sents, test_sents = sentences[:split], sentences[split:]
+
+train_data, vocab = padded_everygram_pipeline(2, train_sents)
+model = Laplace(2)
+model.fit(train_data, vocab)
+print("Vocabulary size:", len(model.vocab))
+
+test_sentence = test_sents[0]
+test_ngrams = list(bigrams(pad_both_ends(test_sentence, n=2)))
+print("Test sentence:", ' '.join(test_sentence))
+print("Perplexity:", model.perplexity(test_ngrams))
+print("Generated text:", model.generate(15, text_seed=['the'], random_seed=42))
+
+-->
+</body></html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 2 (short): Implementing Tokenization and Text Normalization
+===================================================================
+
+Aim
+---
+To tokenize a given text and normalize it using lowercasing, stopword removal, stemming, and lemmatization.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+for pkg in ['punkt', 'punkt_tab', 'stopwords', 'wordnet']:
+    nltk.download(pkg)
+
+import string
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+text = "NLP is amazing! It's transforming how machines understand human languages, isn't it?"
+words = word_tokenize(text)
+lower = [w.lower() for w in words if w not in string.punctuation]
+stop_words = set(stopwords.words('english'))
+no_stop = [w for w in lower if w not in stop_words]
+
+ps, lemmatizer = PorterStemmer(), WordNetLemmatizer()
+print("Sentences:", sent_tokenize(text))
+print("Words:", words)
+print("Without stopwords:", no_stop)
+print("Stemmed:", [ps.stem(w) for w in no_stop])
+print("Lemmatized:", [lemmatizer.lemmatize(w) for w in no_stop])
+
+-->
+</body></html>

@@ -2,117 +2,82 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 1: Perform data cleaning and preprocessing on a dataset containing missing values and outliers
-======================================================================================================
+Program 1: Introduction to NLP Libraries (NLTK, SpaCy)
+======================================================
 
 Aim
 ---
-To clean and preprocess the Penguins dataset by handling missing values and detecting/treating outliers using the IQR method.
-
-Dataset: penguins_size.csv (place it in the same folder as the notebook)
+To explore basic NLP libraries NLTK and spaCy by performing tokenization, POS tagging, and named entity recognition.
 
 Procedure
 ---------
-1. Import pandas, numpy, matplotlib and seaborn.
-2. Load the penguins_size.csv dataset.
-3. Check dataset shape, info and missing values.
-4. Replace invalid entries (e.g. '.') with NaN.
-5. Fill missing numeric values with median and categorical values with mode.
-6. Drop duplicate rows.
-7. Detect outliers in numeric columns using the IQR method.
-8. Plot boxplots before treatment to visualize outliers.
-9. Cap outliers to the IQR lower/upper bounds (winsorizing).
-10. Plot boxplots after treatment and save the cleaned dataset.
+1. Install and import the NLTK and spaCy libraries.
+2. Download required NLTK data (punkt, tagger, chunker, wordnet).
+3. Load spaCy's English model (en_core_web_sm).
+4. Take a sample sentence as input.
+5. Tokenize the sentence using NLTK and spaCy.
+6. Perform POS tagging using both libraries.
+7. Perform Named Entity Recognition using both libraries.
+8. Compare and display the outputs.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn'}
+required = {'nltk': 'nltk', 'spacy': 'spacy'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import spacy
+try:
+    spacy.load("en_core_web_sm")
+except OSError:
+    subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
 
-sns.set_style("whitegrid")
+import nltk
+nltk.download('punkt')
+nltk.download('punkt_tab')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('averaged_perceptron_tagger_eng')
+nltk.download('maxent_ne_chunker')
+nltk.download('maxent_ne_chunker_tab')
+nltk.download('words')
+nltk.download('stopwords')
+nltk.download('wordnet')
+nltk.download('brown')
 
-# Load dataset
-df = pd.read_csv("penguins_size.csv")
-display(df.head())
+import nltk
+import spacy
 
-# Basic info
-print("Shape:", df.shape)
-print(df.info())
+nlp = spacy.load("en_core_web_sm")
 
-# Check missing values
-print("Missing values per column:")
-print(df.isnull().sum())
+text = "Apple is looking at buying a U.K. startup for $1 billion."
 
-# '.' is an invalid entry hiding in the sex column, treat it as missing
-df['sex'] = df['sex'].replace('.', np.nan)
-print(df['sex'].unique())
+# ---- NLTK ----
+print("NLTK Word Tokenization:")
+print(nltk.word_tokenize(text))
 
-# Handle missing values: numeric columns -> median, categorical -> mode
-num_cols = df.select_dtypes(include=np.number).columns
-cat_cols = df.select_dtypes(exclude=np.number).columns
+print("\nNLTK POS Tagging:")
+print(nltk.pos_tag(nltk.word_tokenize(text)))
 
-for col in num_cols:
-    df[col] = df[col].fillna(df[col].median())
+print("\nNLTK Named Entity Recognition:")
+tree = nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(text)))
+print(tree)
 
-for col in cat_cols:
-    df[col] = df[col].fillna(df[col].mode()[0])
+# ---- spaCy ----
+doc = nlp(text)
+print("\nspaCy Tokenization:")
+print([token.text for token in doc])
 
-print("Missing values after cleaning:")
-print(df.isnull().sum())
+print("\nspaCy POS Tagging:")
+print([(token.text, token.pos_) for token in doc])
 
-# Check for duplicate rows
-print("Duplicate rows:", df.duplicated().sum())
-df = df.drop_duplicates()
-
-# Outlier detection using IQR method
-def iqr_bounds(series):
-    q1 = series.quantile(0.25)
-    q3 = series.quantile(0.75)
-    iqr = q3 - q1
-    return q1 - 1.5 * iqr, q3 + 1.5 * iqr
-
-for col in num_cols:
-    lower, upper = iqr_bounds(df[col])
-    outliers = df[(df[col] < lower) | (df[col] > upper)]
-    print(f"{col}: {len(outliers)} outliers (bounds: {lower:.2f}, {upper:.2f})")
-
-# Boxplots before outlier treatment
-fig, axes = plt.subplots(1, len(num_cols), figsize=(4*len(num_cols), 4))
-for ax, col in zip(axes, num_cols):
-    sns.boxplot(y=df[col], ax=ax)
-    ax.set_title(col)
-plt.tight_layout()
-plt.show()
-
-# Treat outliers by capping to IQR bounds (winsorizing)
-for col in num_cols:
-    lower, upper = iqr_bounds(df[col])
-    df[col] = np.clip(df[col], lower, upper)
-
-# Boxplots after outlier treatment
-fig, axes = plt.subplots(1, len(num_cols), figsize=(4*len(num_cols), 4))
-for ax, col in zip(axes, num_cols):
-    sns.boxplot(y=df[col], ax=ax)
-    ax.set_title(col)
-plt.tight_layout()
-plt.show()
-
-# Final cleaned dataset
-print(df.describe())
-df.to_csv("penguins_cleaned.csv", index=False)
-print("\nCleaned dataset saved as penguins_cleaned.csv")
+print("\nspaCy Named Entity Recognition:")
+print([(ent.text, ent.label_) for ent in doc.ents])
 
 -->
 </body></html>

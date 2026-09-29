@@ -2,95 +2,129 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 6: Develop an interactive visualization/dashboard using Plotly or Tableau
-=================================================================================
+Program 6: POS Tagging using HMM and Viterbi Algorithm
+======================================================
 
 Aim
 ---
-To build an interactive dashboard on the Mall Customers dataset using Plotly, combining multiple linked charts to highlight customer trends.
-
-Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
+To implement a Hidden Markov Model (HMM) based POS tagger and decode the most likely tag sequence using the Viterbi algorithm.
 
 Procedure
 ---------
-1. Import pandas, plotly.express, plotly.graph_objects and make_subplots.
-2. Load the Mall_Customers.csv dataset.
-3. Create an interactive scatter plot of Income vs Spending Score.
-4. Create an interactive histogram of Age distribution by Gender.
-5. Create an interactive box plot of Spending Score by Gender.
-6. Bucket customers into age groups and plot average spending per group.
-7. Combine all views into a single 2x2 interactive dashboard using subplots.
-8. Export the dashboard as a standalone HTML file.
+1. Load POS-tagged corpus and split into train/test sets.
+2. Count tag transitions and word emissions from training data.
+3. Compute transition and emission probabilities (add-1 smoothing).
+4. Apply Viterbi algorithm to decode best tag sequence.
+5. Compare predicted tags with true tags and find accuracy.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'pandas': 'pandas', 'plotly': 'plotly', 'nbformat': 'nbformat'}
+required = {'nltk': 'nltk'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import nltk
+nltk.download('treebank')
 
-# Load dataset
-df = pd.read_csv("Mall_Customers.csv")
-display(df.head())
+from nltk.corpus import treebank
+from collections import defaultdict
 
-# Interactive scatter plot: Income vs Spending Score
-fig1 = px.scatter(df, x="Annual Income (k$)", y="Spending Score (1-100)",
-                   color="Gender", hover_data=["Age", "CustomerID"],
-                   title="Annual Income vs Spending Score")
-fig1.show()
+# Load POS-tagged sentences and split into train/test
+tagged_sents = treebank.tagged_sents()
+split = int(0.9 * len(tagged_sents))
+train_sents = tagged_sents[:split]
+test_sents = tagged_sents[split:]
 
-# Interactive histogram: Age distribution
-fig2 = px.histogram(df, x="Age", color="Gender", nbins=20,
-                     title="Age Distribution by Gender")
-fig2.show()
+print("Train sentences:", len(train_sents))
+print("Test sentences:", len(test_sents))
 
-# Interactive box plot: Spending Score by Gender
-fig3 = px.box(df, x="Gender", y="Spending Score (1-100)", color="Gender",
-              title="Spending Score by Gender")
-fig3.show()
+# Collect the tag set and vocabulary, then count transitions and emissions
+tags = set()
+words = set()
+for sent in train_sents:
+    for w, t in sent:
+        tags.add(t)
+        words.add(w.lower())
+tags = sorted(tags)
 
-# Interactive bar chart: average spending score by age group
-df["Age Group"] = pd.cut(df["Age"], bins=[17, 25, 35, 45, 55, 70],
-                          labels=["18-25", "26-35", "36-45", "46-55", "56-70"])
-age_group_avg = df.groupby("Age Group", observed=True)["Spending Score (1-100)"].mean().reset_index()
+transition_counts = defaultdict(lambda: defaultdict(int))
+tag_counts = defaultdict(int)
+emission_counts = defaultdict(lambda: defaultdict(int))
 
-fig4 = px.bar(age_group_avg, x="Age Group", y="Spending Score (1-100)",
-              title="Average Spending Score by Age Group", color="Age Group")
-fig4.show()
+for sent in train_sents:
+    prev_tag = '<s>'
+    for w, t in sent:
+        transition_counts[prev_tag][t] += 1
+        emission_counts[t][w.lower()] += 1
+        tag_counts[t] += 1
+        prev_tag = t
+    transition_counts[prev_tag]['</s>'] += 1
 
-# Combined interactive dashboard (2x2 grid of linked views)
-dashboard = make_subplots(rows=2, cols=2, subplot_titles=(
-    "Income vs Spending Score", "Age Distribution",
-    "Spending Score by Gender", "Avg Spending by Age Group"
-))
+print("Number of tags:", len(tags))
+print("Vocabulary size:", len(words))
 
-for gender in df["Gender"].unique():
-    d = df[df["Gender"] == gender]
-    dashboard.add_trace(go.Scatter(x=d["Annual Income (k$)"], y=d["Spending Score (1-100)"],
-                                    mode="markers", name=f"{gender} (Income vs Spending)"), row=1, col=1)
-    dashboard.add_trace(go.Histogram(x=d["Age"], name=f"{gender} (Age)"), row=1, col=2)
-    dashboard.add_trace(go.Box(y=d["Spending Score (1-100)"], name=gender), row=2, col=1)
+def trans_prob(t1, t2):
+    """P(t2 | t1) with Laplace (add-1) smoothing."""
+    total = sum(transition_counts[t1].values())
+    return (transition_counts[t1][t2] + 1) / (total + len(tags) + 1)
 
-dashboard.add_trace(go.Bar(x=age_group_avg["Age Group"].astype(str),
-                            y=age_group_avg["Spending Score (1-100)"],
-                            name="Avg Spending Score"), row=2, col=2)
 
-dashboard.update_layout(height=800, width=950, title_text="Mall Customer Dashboard", showlegend=False)
-dashboard.show()
+def emit_prob(t, w):
+    """P(w | t) with Laplace (add-1) smoothing."""
+    total = tag_counts[t]
+    return (emission_counts[t][w] + 1) / (total + len(words))
 
-# Save the interactive dashboard as a standalone HTML file
-dashboard.write_html("Mall_Customer_Dashboard.html")
-print("Dashboard saved as Mall_Customer_Dashboard.html")
+def viterbi(sentence):
+    """Decode the most likely tag sequence for `sentence` using the Viterbi algorithm."""
+    words_seq = [w.lower() for w in sentence]
+    n = len(words_seq)
+    V = [{} for _ in range(n)]
+    backpointer = [{} for _ in range(n)]
+
+    # Initialization step
+    for t in tags:
+        V[0][t] = trans_prob('<s>', t) * emit_prob(t, words_seq[0])
+        backpointer[0][t] = '<s>'
+
+    # Recursion step
+    for i in range(1, n):
+        for t in tags:
+            max_prob, best_prev = max(
+                (V[i - 1][pt] * trans_prob(pt, t) * emit_prob(t, words_seq[i]), pt)
+                for pt in tags
+            )
+            V[i][t] = max_prob
+            backpointer[i][t] = best_prev
+
+    # Termination: backtrack through the backpointers
+    best_last_tag = max(tags, key=lambda t: V[n - 1][t])
+    best_path = [best_last_tag]
+    for i in range(n - 1, 0, -1):
+        best_path.insert(0, backpointer[i][best_path[0]])
+
+    return list(zip(sentence, best_path))
+
+# Test the tagger on a held-out sentence and compare against the true tags
+test_sentence = [w for w, t in test_sents[0]]
+true_tags = [t for w, t in test_sents[0]]
+predicted = viterbi(test_sentence)
+
+print("Sentence:", ' '.join(test_sentence))
+
+print("\nWord            Predicted   True")
+correct = 0
+for (w, pt), tt in zip(predicted, true_tags):
+    print(f"{w:15} {pt:10}  {tt}")
+    if pt == tt:
+        correct += 1
+
+print(f"\nAccuracy on this sentence: {correct}/{len(true_tags)} = {correct / len(true_tags) * 100:.2f}%")
 
 -->
 </body></html>

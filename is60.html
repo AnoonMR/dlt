@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 6 (short): POS Tagging using HMM and Viterbi Algorithm
+==============================================================
+
+Aim
+---
+To implement a Hidden Markov Model (HMM) based POS tagger and decode the most likely tag sequence using the Viterbi algorithm.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('treebank')
+
+from nltk.corpus import treebank
+from nltk.tag import hmm
+from nltk.probability import LidstoneProbDist
+
+tagged_sents = treebank.tagged_sents()
+split = int(0.9 * len(tagged_sents))
+train_sents, test_sents = tagged_sents[:split], tagged_sents[split:]
+
+estimator = lambda fd, bins: LidstoneProbDist(fd, 0.1, bins)
+tagger = hmm.HiddenMarkovModelTrainer().train_supervised(train_sents, estimator=estimator)
+
+test_sentence = [w for w, t in test_sents[0]]
+true_tags = [t for w, t in test_sents[0]]
+predicted = tagger.tag(test_sentence)
+
+print("Sentence:", ' '.join(test_sentence))
+print("Predicted tags:", predicted)
+correct = sum(1 for (w, pt), tt in zip(predicted, true_tags) if pt == tt)
+print(f"Accuracy: {correct}/{len(true_tags)} = {correct/len(true_tags)*100:.2f}%")
+
+-->
+</body></html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 3 (short): Implementing Edit Distance and Weighted Edit Distance
+========================================================================
+
+Aim
+---
+To compute the Edit Distance and Weighted Edit Distance between two given strings using dynamic programming.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+
+w1, w2 = "intention", "execution"
+print(f"Edit Distance between '{w1}' and '{w2}': {nltk.edit_distance(w1, w2)}")
+print(f"Weighted Edit Distance (substitution_cost=2): "
+      f"{nltk.edit_distance(w1, w2, substitution_cost=2)}")
+
+-->
+</body></html>

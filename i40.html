@@ -2,115 +2,84 @@
 <html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
 <body>
 <!--
-Program 4: Apply classification or clustering techniques to solve a data driven problem and analyze the outcomes
-================================================================================================================
+Program 4: Noisy Channel Model for Spelling Correction
+======================================================
 
 Aim
 ---
-To apply K-Means clustering on the Mall Customers dataset to segment customers based on income and spending score, and analyze the resulting clusters.
-
-Dataset: Mall_Customers.csv (place it in the same folder as the notebook)
+To implement a spelling correction system based on the Noisy Channel Model using edit distance and word frequency.
 
 Procedure
 ---------
-1. Import pandas, numpy, matplotlib, seaborn and scikit-learn modules.
-2. Load the Mall_Customers.csv dataset.
-3. Check missing values and duplicates.
-4. Select Annual Income and Spending Score as clustering features.
-5. Scale the features using StandardScaler.
-6. Use the Elbow Method to find the optimal number of clusters.
-7. Apply K-Means clustering with K = 5.
-8. Visualize the clusters and centroids on a scatter plot.
-9. Analyze cluster-wise averages and customer counts per cluster.
-10. Evaluate clustering quality using the Silhouette Score.
+1. Build word frequencies from a corpus (language model).
+2. Generate candidate words within edit distance 1-2 (channel model).
+3. Keep only valid dictionary candidates.
+4. Pick the candidate with highest P(word).
+5. Test on misspelled words and display corrections.
 
 Code
 ----
 # --- Auto-install required packages (safe to re-run; skips what's already installed) ---
 import importlib, subprocess, sys
 
-required = {'pandas': 'pandas', 'numpy': 'numpy', 'matplotlib': 'matplotlib', 'seaborn': 'seaborn', 'sklearn': 'scikit-learn'}
+required = {'nltk': 'nltk'}
 for import_name, pip_name in required.items():
     try:
         importlib.import_module(import_name)
     except ImportError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import nltk
+nltk.download('brown')
 
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import silhouette_score
+from collections import Counter
+from nltk.corpus import brown
 
-sns.set_style("whitegrid")
+# Language model: real word-frequency counts built from the Brown corpus
+# (a plain word list like nltk.corpus.words has no frequency info, so
+# using a running-text corpus gives far better corrections)
+WORDS = Counter(w.lower() for w in brown.words())
 
-# Load dataset
-df = pd.read_csv("Mall_Customers.csv")
-display(df.head())
 
-print("Shape:", df.shape)
-print("\nMissing values:\n", df.isnull().sum())
-print("Duplicate rows:", df.duplicated().sum())
+def P(word, N=sum(WORDS.values())):
+    """Probability of `word` (language model term of the noisy channel)."""
+    return WORDS[word] / N
 
-display(df.describe())
 
-# Select features for clustering
-X = df[["Annual Income (k$)", "Spending Score (1-100)"]]
-display(X.head())
+def edits1(word):
+    """All strings that are one edit away from `word` (channel model)."""
+    letters = 'abcdefghijklmnopqrstuvwxyz'
+    splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+    deletes = [L + R[1:] for L, R in splits if R]
+    transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1]
+    replaces = [L + c + R[1:] for L, R in splits if R for c in letters]
+    inserts = [L + c + R for L, R in splits for c in letters]
+    return set(deletes + transposes + replaces + inserts)
 
-# Scale features
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
 
-# Elbow method to find optimal number of clusters
-wcss = []
-for i in range(1, 11):
-    kmeans = KMeans(n_clusters=i, random_state=42, n_init=10)
-    kmeans.fit(X_scaled)
-    wcss.append(kmeans.inertia_)
+def edits2(word):
+    """All strings that are two edits away from `word`."""
+    return set(e2 for e1 in edits1(word) for e2 in edits1(e1))
 
-plt.figure(figsize=(8, 5))
-plt.plot(range(1, 11), wcss, marker="o")
-plt.xlabel("Number of Clusters (K)")
-plt.ylabel("WCSS")
-plt.title("Elbow Method")
-plt.show()
 
-# Apply K-Means with K = 5
-kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
-df["Cluster"] = kmeans.fit_predict(X_scaled)
-display(df.head())
+def known(word_list):
+    """Subset of `word_list` that appear in the dictionary."""
+    return set(w for w in word_list if w in WORDS)
 
-# Visualize the clusters
-centers = scaler.inverse_transform(kmeans.cluster_centers_)
 
-plt.figure(figsize=(9, 7))
-sns.scatterplot(data=df, x="Annual Income (k$)", y="Spending Score (1-100)", hue="Cluster", palette="Set1", s=100)
-plt.scatter(centers[:, 0], centers[:, 1], color="black", marker="X", s=200, label="Centroids")
-plt.title("Customer Segments (K-Means Clustering)")
-plt.legend()
-plt.show()
+def candidates(word):
+    """Generate possible spelling correction candidates for word."""
+    return known([word]) or known(edits1(word)) or known(edits2(word)) or [word]
 
-# Cluster-wise summary
-cluster_summary = df.groupby("Cluster")[["Age", "Annual Income (k$)", "Spending Score (1-100)"]].mean()
-print(cluster_summary)
 
-# Number of customers per cluster
-cluster_counts = df["Cluster"].value_counts().sort_index()
-plt.figure(figsize=(7, 5))
-cluster_counts.plot(kind="bar")
-plt.title("Number of Customers in Each Cluster")
-plt.xlabel("Cluster")
-plt.ylabel("Count")
-plt.xticks(rotation=0)
-plt.show()
+def correction(word):
+    """Most probable spelling correction for word (argmax P(word) among candidates)."""
+    return max(candidates(word), key=P)
 
-# Evaluate clustering using Silhouette Score
-score = silhouette_score(X_scaled, df["Cluster"])
-print("Silhouette Score:", round(score, 3))
+
+test_words = ["speling", "korrect", "recieve", "wrld"]
+for w in test_words:
+    print(f"'{w}' -> '{correction(w)}'")
 
 -->
 </body></html>
