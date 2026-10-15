@@ -1,0 +1,92 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 7: Implementing Word Embeddings (Word2Vec, GloVe)
+=========================================================
+
+Aim
+---
+To implement word embeddings using a self-trained Word2Vec model and pretrained GloVe vectors, and explore word similarity and analogy relationships captured by each.
+
+Procedure
+---------
+1. Import gensim's Word2Vec and the gensim downloader API.
+2. Load Brown corpus sentences and lowercase the tokens.
+3. Train a Word2Vec (skip-gram) model on the corpus.
+4. Find words most similar to given words and test a word analogy.
+5. Compute similarity between a word pair.
+6. Load pretrained GloVe vectors via the downloader API.
+7. Repeat the same similarity and analogy queries on GloVe.
+8. Compare the Word2Vec and GloVe results for the same words.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'gensim': 'gensim', 'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+import gensim.downloader as api
+from gensim.models import Word2Vec
+from nltk.corpus import brown
+
+# ---- Helper functions to pretty-print similarity/analogy results ----
+def show_most_similar(vectors, word, topn=5):
+    print(f"Most similar to '{word}':")
+    for w, score in vectors.most_similar(word, topn=topn):
+        print(f"  {w:<15s} {score:.4f}")
+
+def show_analogy(vectors, positive, negative, topn=5):
+    label = ' + '.join(positive) + ' - ' + ' - '.join(negative)
+    print(f"Analogy: {label} = ?")
+    for w, score in vectors.most_similar(positive=positive, negative=negative, topn=topn):
+        print(f"  {w:<15s} {score:.4f}")
+
+# ---- Train a Word2Vec model on the Brown corpus ----
+sentences = [[w.lower() for w in sent] for sent in brown.sents()]
+print("Training sentences:", len(sentences))
+
+w2v_model = Word2Vec(sentences, vector_size=100, window=5, min_count=5,
+                      workers=1, seed=42, sg=1, epochs=10)
+print("Word2Vec vocabulary size:", len(w2v_model.wv))
+
+# ---- Explore the self-trained Word2Vec embeddings ----
+show_most_similar(w2v_model.wv, 'money')
+print()
+show_most_similar(w2v_model.wv, 'woman')
+print()
+show_analogy(w2v_model.wv, ['king', 'woman'], ['man'])
+print()
+print(f"similarity('car', 'automobile'): {w2v_model.wv.similarity('car', 'automobile'):.4f}")
+
+# ---- Load pretrained GloVe vectors (50-dimensional, trained on Wikipedia + Gigaword) ----
+glove_model = api.load('glove-wiki-gigaword-50')
+print("GloVe vocabulary size:", len(glove_model))
+
+# ---- Explore the pretrained GloVe embeddings ----
+show_most_similar(glove_model, 'money')
+print()
+show_most_similar(glove_model, 'woman')
+print()
+show_analogy(glove_model, ['king', 'woman'], ['man'])
+print()
+print(f"similarity('car', 'automobile'): {glove_model.similarity('car', 'automobile'):.4f}")
+
+# ---- Compare the self-trained Word2Vec model against the pretrained GloVe vectors ----
+w2v_top = w2v_model.wv.most_similar('money', topn=1)[0]
+glove_top = glove_model.most_similar('money', topn=1)[0]
+print("Comparison for 'money' -> top-1 similar word:")
+print(f"  Word2Vec: {w2v_top[0]:<10s} {w2v_top[1]:.4f}")
+print(f"  GloVe   : {glove_top[0]:<10s} {glove_top[1]:.4f}")
+
+-->
+</body></html>

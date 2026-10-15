@@ -1,5 +1,5 @@
 """
-Generates index.html + i10..i60.html (long form) and s.html + is10..is60.html
+Generates index.html + i10..i70.html (long form) and s.html + is10..is70.html
 (short form) for the AnoonMR/dlt GitHub Pages site - NLP lab programs.
 
 Each page is visually blank (white space only) - the Aim, Procedure (long form
@@ -9,10 +9,10 @@ copy-paste.
 
 Sources (nothing is retyped here):
   - Long form title/Aim/Procedure: NLP_Lab_Programs_1to4.txt (Programs 1-4) and
-    NLP_Lab_Program5.txt / NLP_Lab_Program6.txt, all in the nlp folder
-    (read-only). Confirmed identical, code-for-code, to the already-tested
-    notebooks in that same folder.
-  - Short form Aim: the markdown cell of NLP_Lab_Programs_Short\\Program1..6.ipynb
+    NLP_Lab_Program5.txt / NLP_Lab_Program6.txt / NLP_Lab_Program7.txt, all in
+    the nlp folder (read-only). Confirmed identical, code-for-code, to the
+    already-tested notebooks in that same folder.
+  - Short form Aim: the markdown cell of NLP_Lab_Programs_Short\\Program1..7.ipynb
     (read-only) - no Procedure is documented for the short forms (the short
     code often uses a different approach, e.g. Program 4 short uses
     pyspellchecker instead of a hand-rolled noisy channel model, so the long
@@ -51,6 +51,7 @@ LONG_PROGRAMS = [
     ("4", "i40.html", "Program4_Noisy_Channel_Spelling_Correction.ipynb"),
     ("5", "i50.html", "Program5_NGram_Model.ipynb"),
     ("6", "i60.html", "Program6_HMM_POS_Tagging.ipynb"),
+    ("7", "i70.html", "Program7_Word_Embeddings.ipynb"),
 ]
 
 SHORT_PROGRAMS = [
@@ -60,6 +61,7 @@ SHORT_PROGRAMS = [
     ("4", "is40.html", "Short_Program4_Noisy_Channel_Spelling_Correction.ipynb"),
     ("5", "is50.html", "Short_Program5_NGram_Model.ipynb"),
     ("6", "is60.html", "Short_Program6_HMM_POS_Tagging.ipynb"),
+    ("7", "is70.html", "Short_Program7_Word_Embeddings.ipynb"),
 ]
 
 
@@ -149,6 +151,7 @@ def write_page(filename, comment_body):
 records = parse_multi(os.path.join(NLP_DIR, "NLP_Lab_Programs_1to4.txt"))
 records.update(parse_single(os.path.join(NLP_DIR, "NLP_Lab_Program5.txt")))
 records.update(parse_single(os.path.join(NLP_DIR, "NLP_Lab_Program6.txt")))
+records.update(parse_single(os.path.join(NLP_DIR, "NLP_Lab_Program7.txt")))
 
 long_blocks = []
 for num, page, nb_file in LONG_PROGRAMS:
