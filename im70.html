@@ -1,0 +1,50 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 7 (medium): Implementing Word Embeddings (Word2Vec, GloVe)
+==================================================================
+
+Aim
+---
+To implement word embeddings using a self-trained Word2Vec model and pretrained GloVe vectors, and explore word similarity and analogy relationships captured by each.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'gensim': 'gensim', 'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+import gensim.downloader as api
+from gensim.models import Word2Vec
+from nltk.corpus import brown
+
+def explore(name, vectors):
+    print(f"===== {name} (vocabulary: {len(vectors)}) =====")
+    print("Most similar to 'money':", [w for w, s in vectors.most_similar('money', topn=5)])
+    print("Most similar to 'woman':", [w for w, s in vectors.most_similar('woman', topn=5)])
+    w, s = vectors.most_similar(positive=['king', 'woman'], negative=['man'], topn=1)[0]
+    print(f"king - man + woman = {w} ({s:.4f})")
+    print(f"similarity(car, automobile) = {vectors.similarity('car', 'automobile'):.4f}\n")
+
+# Train Word2Vec (skip-gram) on the Brown corpus
+sentences = [[w.lower() for w in s] for s in brown.sents()]
+w2v = Word2Vec(sentences, vector_size=100, window=5, min_count=5,
+               workers=1, seed=42, sg=1, epochs=10)
+explore("Word2Vec (Brown corpus)", w2v.wv)
+
+# Pretrained GloVe vectors
+glove = api.load('glove-wiki-gigaword-50')
+explore("GloVe (pretrained)", glove)
+
+-->
+</body></html>

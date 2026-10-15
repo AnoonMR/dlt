@@ -1,6 +1,7 @@
 """
-Generates index.html + i10..i70.html (long form) and s.html + is10..is70.html
-(short form) for the AnoonMR/dlt GitHub Pages site - NLP lab programs.
+Generates index.html + i10..i70.html (long form), s.html + is10..is70.html
+(short form), and m.html + im10..im70.html (medium form) for the AnoonMR/dlt
+GitHub Pages site - NLP lab programs.
 
 Each page is visually blank (white space only) - the Aim, Procedure (long form
 only, where available) and full Code for each program live inside an HTML
@@ -12,15 +13,15 @@ Sources (nothing is retyped here):
     NLP_Lab_Program5.txt / NLP_Lab_Program6.txt / NLP_Lab_Program7.txt, all in
     the nlp folder (read-only). Confirmed identical, code-for-code, to the
     already-tested notebooks in that same folder.
-  - Short form Aim: the markdown cell of NLP_Lab_Programs_Short\\Program1..7.ipynb
-    (read-only) - no Procedure is documented for the short forms (the short
-    code often uses a different approach, e.g. Program 4 short uses
-    pyspellchecker instead of a hand-rolled noisy channel model, so the long
-    form's procedure would not describe it correctly - omitted rather than
-    guessed).
-  - Code (both forms): the two cells of the verified lt1 notebooks built by
-    make_lt1_notebooks.py - auto-install/download cell merged in front of the
-    program cell, so one paste into a fresh notebook cell installs what's
+  - Short/Medium form Aim: the markdown cell of NLP_Lab_Programs_Short\\ or
+    NLP_Lab_Programs_Medium\\Program1..7.ipynb (read-only) - no Procedure is
+    documented for short/medium (each is its own implementation, not simply a
+    trimmed long form - e.g. Program 4 short/medium both hand-roll or use a
+    library differently than the long form, so the long form's procedure
+    would not describe them correctly - omitted rather than guessed).
+  - Code (all three forms): the two cells of the verified lt1 notebooks built
+    by make_lt1_notebooks.py - auto-install/download cell merged in front of
+    the program cell, so one paste into a fresh notebook cell installs what's
     missing and runs.
 
 No datasets for this subject - everything is either a hardcoded string or an
@@ -37,6 +38,7 @@ import nbformat
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
 NLP_DIR = r"C:\Users\Anoon M R\Documents\nlp"
 SHORT_DIR = os.path.join(NLP_DIR, "NLP_Lab_Programs_Short")
+MEDIUM_DIR = os.path.join(NLP_DIR, "NLP_Lab_Programs_Medium")
 
 # Tab title is deliberately neutral on every page (user preference, set in the
 # repo directly on 2026-09-09) so the tab never reveals what the page holds.
@@ -62,6 +64,16 @@ SHORT_PROGRAMS = [
     ("5", "is50.html", "Short_Program5_NGram_Model.ipynb"),
     ("6", "is60.html", "Short_Program6_HMM_POS_Tagging.ipynb"),
     ("7", "is70.html", "Short_Program7_Word_Embeddings.ipynb"),
+]
+
+MEDIUM_PROGRAMS = [
+    ("1", "im10.html", "Medium_Program1_NLTK_Intro.ipynb"),
+    ("2", "im20.html", "Medium_Program2_Tokenization_Normalization.ipynb"),
+    ("3", "im30.html", "Medium_Program3_Edit_Distance.ipynb"),
+    ("4", "im40.html", "Medium_Program4_Noisy_Channel_Spelling_Correction.ipynb"),
+    ("5", "im50.html", "Medium_Program5_NGram_Model.ipynb"),
+    ("6", "im60.html", "Medium_Program6_HMM_POS_Tagging.ipynb"),
+    ("7", "im70.html", "Medium_Program7_Word_Embeddings.ipynb"),
 ]
 
 
@@ -91,9 +103,9 @@ def _extract(body):
     return dict(aim=aim, procedure=steps)
 
 
-def short_aim(nb_file):
-    """Short forms only carry an Aim (no Procedure - see module docstring)."""
-    nb = nbformat.read(os.path.join(SHORT_DIR, nb_file), as_version=4)
+def aim_only(source_dir, nb_file):
+    """Short/Medium forms only carry an Aim (no Procedure - see module docstring)."""
+    nb = nbformat.read(os.path.join(source_dir, nb_file), as_version=4)
     md = nb.cells[0].source
     return re.search(r"\*\*AIM:\*\*\s*(.+)", md).group(1).strip()
 
@@ -115,8 +127,8 @@ def long_block(num, record, code):
     )
 
 
-def short_block(num, title, aim, code):
-    full_title = f"Program {num} (short): {title}"
+def aim_only_block(num, title, aim, code, kind):
+    full_title = f"Program {num} ({kind}): {title}"
     return (
         f"{full_title}\n{'=' * len(full_title)}\n\n"
         f"Aim\n---\n{aim}\n\n"
@@ -160,15 +172,24 @@ for num, page, nb_file in LONG_PROGRAMS:
     write_page(page, b)
 write_page("index.html", "\n\n\n".join(long_blocks))
 
-# ---- Short form: is10..is60.html + s.html ----
+# ---- Short form: is10..is70.html + s.html ----
 short_blocks = []
 for num, page, nb_file in SHORT_PROGRAMS:
     title = records[num]["title"]
-    short_nb_file_in_short_dir = f"Program{num}.ipynb"
-    aim = short_aim(short_nb_file_in_short_dir)
-    b = short_block(num, title, aim, full_code(nb_file))
+    aim = aim_only(SHORT_DIR, f"Program{num}.ipynb")
+    b = aim_only_block(num, title, aim, full_code(nb_file), "short")
     short_blocks.append(b)
     write_page(page, b)
 write_page("s.html", "\n\n\n".join(short_blocks))
+
+# ---- Medium form: im10..im70.html + m.html ----
+medium_blocks = []
+for num, page, nb_file in MEDIUM_PROGRAMS:
+    title = records[num]["title"]
+    aim = aim_only(MEDIUM_DIR, f"Program{num}.ipynb")
+    b = aim_only_block(num, title, aim, full_code(nb_file), "medium")
+    medium_blocks.append(b)
+    write_page(page, b)
+write_page("m.html", "\n\n\n".join(medium_blocks))
 
 print("Done.")

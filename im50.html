@@ -1,0 +1,68 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 5 (medium): N-Gram Model Implementation and Evaluation Insights
+=======================================================================
+
+Aim
+---
+To implement a bigram language model with add-1 smoothing and evaluate it using sentence probability, perplexity and text generation.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+import math
+from nltk import bigrams, ConditionalFreqDist
+from nltk.corpus import brown
+
+sentences = brown.sents(categories='news')
+split = int(0.8 * len(sentences))
+train_sents, test_sents = sentences[:split], sentences[split:]
+
+pad = lambda s: ['<s>'] + [w.lower() for w in s] + ['</s>']
+
+# Bigram counts and vocabulary
+cfd = ConditionalFreqDist(bg for s in train_sents for bg in bigrams(pad(s)))
+vocab = {w for s in train_sents for w in pad(s)}
+V = len(vocab)
+print("Train/Test sentences:", len(train_sents), "/", len(test_sents))
+print("Vocabulary size:", V)
+
+def bigram_prob(w1, w2):
+    """P(w2 | w1) with add-1 (Laplace) smoothing."""
+    return (cfd[w1][w2] + 1) / (cfd[w1].N() + V)
+
+def evaluate(sentence):
+    tokens = pad(sentence)
+    log_p = sum(math.log(bigram_prob(w1, w2)) for w1, w2 in bigrams(tokens))
+    return math.exp(log_p), math.exp(-log_p / (len(tokens) - 1))
+
+prob, pp = evaluate(test_sents[0])
+print("\nTest sentence:", ' '.join(test_sents[0]))
+print("Probability:", prob)
+print("Perplexity:", round(pp, 2))
+
+# Greedy text generation
+word, generated = 'the', ['the']
+for _ in range(10):
+    word = cfd[word].max()
+    if word == '</s>':
+        break
+    generated.append(word)
+print("Generated text:", ' '.join(generated))
+
+-->
+</body></html>

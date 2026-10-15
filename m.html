@@ -1,0 +1,362 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 1 (medium): Introduction to NLP Libraries (NLTK, SpaCy)
+===============================================================
+
+Aim
+---
+To explore the NLTK library by performing tokenization, POS tagging, and named entity recognition.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+for pkg in ['punkt', 'punkt_tab', 'averaged_perceptron_tagger', 'averaged_perceptron_tagger_eng', 'maxent_ne_chunker', 'maxent_ne_chunker_tab', 'words']:
+    nltk.download(pkg)
+
+import nltk
+
+text = "Apple is looking at buying a U.K. startup for $1 billion. Tim Cook announced it in London."
+
+sentences = nltk.sent_tokenize(text)
+tokens = nltk.word_tokenize(text)
+tags = nltk.pos_tag(tokens)
+
+print("Sentences:", sentences)
+print("Word tokens:", tokens)
+print("\nPOS Tags:")
+for word, tag in tags:
+    print(f"  {word:10s} {tag}")
+
+tree = nltk.ne_chunk(tags)
+print("\nNamed Entities:")
+for subtree in tree:
+    if hasattr(subtree, 'label'):
+        entity = ' '.join(w for w, t in subtree.leaves())
+        print(f"  {entity:15s} {subtree.label()}")
+
+
+
+Program 2 (medium): Implementing Tokenization and Text Normalization
+====================================================================
+
+Aim
+---
+To tokenize a given text and normalize it using lowercasing, stopword removal, stemming, and lemmatization.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+for pkg in ['punkt', 'punkt_tab', 'stopwords', 'wordnet']:
+    nltk.download(pkg)
+
+import string
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+text = "NLP is amazing! It's transforming how machines understand human languages, isn't it?"
+
+# Tokenization
+print("Sentences:", sent_tokenize(text))
+words = word_tokenize(text)
+print("Words:", words)
+
+# Lowercasing and punctuation removal
+lower = [w.lower() for w in words]
+no_punct = [w for w in lower if w not in string.punctuation]
+print("Lowercased (no punctuation):", no_punct)
+
+# Stopword removal
+stop_words = set(stopwords.words('english'))
+no_stop = [w for w in no_punct if w not in stop_words]
+print("Without stopwords:", no_stop)
+
+# Stemming vs Lemmatization
+ps, lemmatizer = PorterStemmer(), WordNetLemmatizer()
+print(f"\n{'Word':14s}{'Stem':12s}Lemma")
+for w in no_stop:
+    print(f"{w:14s}{ps.stem(w):12s}{lemmatizer.lemmatize(w)}")
+
+
+
+Program 3 (medium): Implementing Edit Distance and Weighted Edit Distance
+=========================================================================
+
+Aim
+---
+To compute the Edit Distance and Weighted Edit Distance between two given strings using dynamic programming.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+def edit_distance(s1, s2, ins_cost=1, del_cost=1, sub_cost=1):
+    """Edit distance using dynamic programming (custom costs give weighted edit distance)."""
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(m + 1):
+        dp[i][0] = i * del_cost
+    for j in range(n + 1):
+        dp[0][j] = j * ins_cost
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s1[i - 1] == s2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = min(dp[i - 1][j] + del_cost,       # deletion
+                               dp[i][j - 1] + ins_cost,       # insertion
+                               dp[i - 1][j - 1] + sub_cost)   # substitution
+    return dp[m][n]
+
+pairs = [("intention", "execution"), ("kitten", "sitting"), ("sunday", "saturday")]
+for w1, w2 in pairs:
+    print(f"{w1} -> {w2}: Edit Distance = {edit_distance(w1, w2)}, "
+          f"Weighted (sub=2) = {edit_distance(w1, w2, sub_cost=2)}")
+
+
+
+Program 4 (medium): Noisy Channel Model for Spelling Correction
+===============================================================
+
+Aim
+---
+To implement a spelling correction system based on the Noisy Channel Model using edit distance and word frequency.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+from collections import Counter
+from nltk.corpus import brown
+
+# Language model: word frequencies from the Brown corpus
+WORDS = Counter(w.lower() for w in brown.words())
+N = sum(WORDS.values())
+
+def P(word):
+    return WORDS[word] / N
+
+def edits1(word):
+    """Channel model: all strings one edit away from word."""
+    letters = 'abcdefghijklmnopqrstuvwxyz'
+    splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+    deletes = [L + R[1:] for L, R in splits if R]
+    transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1]
+    replaces = [L + c + R[1:] for L, R in splits if R for c in letters]
+    inserts = [L + c + R for L, R in splits for c in letters]
+    return set(deletes + transposes + replaces + inserts)
+
+def known(words):
+    return {w for w in words if w in WORDS}
+
+def correction(word):
+    candidates = (known([word]) or known(edits1(word))
+                  or known(e2 for e1 in edits1(word) for e2 in edits1(e1)) or [word])
+    return max(candidates, key=P)
+
+for w in ["speling", "korrect", "recieve", "wrld"]:
+    print(f"'{w}' -> '{correction(w)}'")
+
+
+
+Program 5 (medium): N-Gram Model Implementation and Evaluation Insights
+=======================================================================
+
+Aim
+---
+To implement a bigram language model with add-1 smoothing and evaluate it using sentence probability, perplexity and text generation.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+import math
+from nltk import bigrams, ConditionalFreqDist
+from nltk.corpus import brown
+
+sentences = brown.sents(categories='news')
+split = int(0.8 * len(sentences))
+train_sents, test_sents = sentences[:split], sentences[split:]
+
+pad = lambda s: ['<s>'] + [w.lower() for w in s] + ['</s>']
+
+# Bigram counts and vocabulary
+cfd = ConditionalFreqDist(bg for s in train_sents for bg in bigrams(pad(s)))
+vocab = {w for s in train_sents for w in pad(s)}
+V = len(vocab)
+print("Train/Test sentences:", len(train_sents), "/", len(test_sents))
+print("Vocabulary size:", V)
+
+def bigram_prob(w1, w2):
+    """P(w2 | w1) with add-1 (Laplace) smoothing."""
+    return (cfd[w1][w2] + 1) / (cfd[w1].N() + V)
+
+def evaluate(sentence):
+    tokens = pad(sentence)
+    log_p = sum(math.log(bigram_prob(w1, w2)) for w1, w2 in bigrams(tokens))
+    return math.exp(log_p), math.exp(-log_p / (len(tokens) - 1))
+
+prob, pp = evaluate(test_sents[0])
+print("\nTest sentence:", ' '.join(test_sents[0]))
+print("Probability:", prob)
+print("Perplexity:", round(pp, 2))
+
+# Greedy text generation
+word, generated = 'the', ['the']
+for _ in range(10):
+    word = cfd[word].max()
+    if word == '</s>':
+        break
+    generated.append(word)
+print("Generated text:", ' '.join(generated))
+
+
+
+Program 6 (medium): POS Tagging using HMM and Viterbi Algorithm
+===============================================================
+
+Aim
+---
+To implement a Hidden Markov Model (HMM) based POS tagger and decode the most likely tag sequence using the Viterbi algorithm.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('treebank')
+
+from nltk.corpus import treebank
+from nltk.tag import hmm
+from nltk.probability import LidstoneProbDist
+
+tagged_sents = treebank.tagged_sents()
+split = int(0.9 * len(tagged_sents))
+train_sents, test_sents = tagged_sents[:split], tagged_sents[split:]
+print("Train/Test sentences:", len(train_sents), "/", len(test_sents))
+
+# Train HMM: transition P(tag|prev_tag) and emission P(word|tag) with Lidstone smoothing
+trainer = hmm.HiddenMarkovModelTrainer()
+tagger = trainer.train_supervised(train_sents,
+                                  estimator=lambda fd, bins: LidstoneProbDist(fd, 0.1, bins))
+
+# Viterbi decoding on one test sentence
+words = [w for w, t in test_sents[0]]
+true_tags = [t for w, t in test_sents[0]]
+pred_tags = [t for w, t in tagger.tag(words)]   # tag() uses the Viterbi algorithm
+
+print(f"\n{'Word':14s}{'Predicted':11s}True")
+for w, p, t in zip(words, pred_tags, true_tags):
+    print(f"{w:14s}{p:11s}{t}{'' if p == t else '  <-- wrong'}")
+
+correct = sum(p == t for p, t in zip(pred_tags, true_tags))
+print(f"\nSentence accuracy: {correct}/{len(true_tags)} = {correct / len(true_tags) * 100:.2f}%")
+
+
+
+Program 7 (medium): Implementing Word Embeddings (Word2Vec, GloVe)
+==================================================================
+
+Aim
+---
+To implement word embeddings using a self-trained Word2Vec model and pretrained GloVe vectors, and explore word similarity and analogy relationships captured by each.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'gensim': 'gensim', 'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('brown')
+
+import gensim.downloader as api
+from gensim.models import Word2Vec
+from nltk.corpus import brown
+
+def explore(name, vectors):
+    print(f"===== {name} (vocabulary: {len(vectors)}) =====")
+    print("Most similar to 'money':", [w for w, s in vectors.most_similar('money', topn=5)])
+    print("Most similar to 'woman':", [w for w, s in vectors.most_similar('woman', topn=5)])
+    w, s = vectors.most_similar(positive=['king', 'woman'], negative=['man'], topn=1)[0]
+    print(f"king - man + woman = {w} ({s:.4f})")
+    print(f"similarity(car, automobile) = {vectors.similarity('car', 'automobile'):.4f}\n")
+
+# Train Word2Vec (skip-gram) on the Brown corpus
+sentences = [[w.lower() for w in s] for s in brown.sents()]
+w2v = Word2Vec(sentences, vector_size=100, window=5, min_count=5,
+               workers=1, seed=42, sg=1, epochs=10)
+explore("Word2Vec (Brown corpus)", w2v.wv)
+
+# Pretrained GloVe vectors
+glove = api.load('glove-wiki-gigaword-50')
+explore("GloVe (pretrained)", glove)
+
+-->
+</body></html>

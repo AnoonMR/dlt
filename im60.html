@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 6 (medium): POS Tagging using HMM and Viterbi Algorithm
+===============================================================
+
+Aim
+---
+To implement a Hidden Markov Model (HMM) based POS tagger and decode the most likely tag sequence using the Viterbi algorithm.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {'nltk': 'nltk'}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+import nltk
+nltk.download('treebank')
+
+from nltk.corpus import treebank
+from nltk.tag import hmm
+from nltk.probability import LidstoneProbDist
+
+tagged_sents = treebank.tagged_sents()
+split = int(0.9 * len(tagged_sents))
+train_sents, test_sents = tagged_sents[:split], tagged_sents[split:]
+print("Train/Test sentences:", len(train_sents), "/", len(test_sents))
+
+# Train HMM: transition P(tag|prev_tag) and emission P(word|tag) with Lidstone smoothing
+trainer = hmm.HiddenMarkovModelTrainer()
+tagger = trainer.train_supervised(train_sents,
+                                  estimator=lambda fd, bins: LidstoneProbDist(fd, 0.1, bins))
+
+# Viterbi decoding on one test sentence
+words = [w for w, t in test_sents[0]]
+true_tags = [t for w, t in test_sents[0]]
+pred_tags = [t for w, t in tagger.tag(words)]   # tag() uses the Viterbi algorithm
+
+print(f"\n{'Word':14s}{'Predicted':11s}True")
+for w, p, t in zip(words, pred_tags, true_tags):
+    print(f"{w:14s}{p:11s}{t}{'' if p == t else '  <-- wrong'}")
+
+correct = sum(p == t for p, t in zip(pred_tags, true_tags))
+print(f"\nSentence accuracy: {correct}/{len(true_tags)} = {correct / len(true_tags) * 100:.2f}%")
+
+-->
+</body></html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>htnkl</title><style>html,body{margin:0;padding:0;background:#fff;min-height:100vh}</style></head>
+<body>
+<!--
+Program 3 (medium): Implementing Edit Distance and Weighted Edit Distance
+=========================================================================
+
+Aim
+---
+To compute the Edit Distance and Weighted Edit Distance between two given strings using dynamic programming.
+
+Code
+----
+# --- Auto-install required packages (safe to re-run; skips what's already installed) ---
+import importlib, subprocess, sys
+
+required = {}
+for import_name, pip_name in required.items():
+    try:
+        importlib.import_module(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pip_name])
+
+def edit_distance(s1, s2, ins_cost=1, del_cost=1, sub_cost=1):
+    """Edit distance using dynamic programming (custom costs give weighted edit distance)."""
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(m + 1):
+        dp[i][0] = i * del_cost
+    for j in range(n + 1):
+        dp[0][j] = j * ins_cost
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s1[i - 1] == s2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = min(dp[i - 1][j] + del_cost,       # deletion
+                               dp[i][j - 1] + ins_cost,       # insertion
+                               dp[i - 1][j - 1] + sub_cost)   # substitution
+    return dp[m][n]
+
+pairs = [("intention", "execution"), ("kitten", "sitting"), ("sunday", "saturday")]
+for w1, w2 in pairs:
+    print(f"{w1} -> {w2}: Edit Distance = {edit_distance(w1, w2)}, "
+          f"Weighted (sub=2) = {edit_distance(w1, w2, sub_cost=2)}")
+
+-->
+</body></html>
